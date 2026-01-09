@@ -1,0 +1,9 @@
+[submodule "src/LibRPA"]
+	path = src/LibRPA
+	url = https://github.com/Srlive1201/LibRPA.git
+[submodule "src/LibComm"]
+	path = src/LibComm
+	url = https://github.com/abacusmodeling/LibComm.git
+[submodule "src/LibRI"]
+	path = src/LibRI
+	url = https://github.com/abacusmodeling/LibRI.git
