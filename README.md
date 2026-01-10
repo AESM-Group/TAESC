@@ -7,7 +7,7 @@
 ```
 ./
 |-- binding/
-|-- doc/
+|-- docs/
 |-- include/
 |-- src/
 |-- thirdparty/
