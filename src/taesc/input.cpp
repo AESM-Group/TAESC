@@ -72,12 +72,10 @@ void taesc_set_ibz_mapping(TaescHandler *h, int nkpts,
     librpa_set_ibz_mapping(get_librpa_handler(h), nkpts, map_ibzk);
 }
 
-void taesc_set_lri_coeff(TaescHandler *h, TaescParallelRouting routing,
-                         int I, int J, int nbasis_i, int nbasis_j,
+void taesc_set_lri_coeff(TaescHandler *h, int I, int J, int nbasis_i, int nbasis_j,
                          int naux_mu, const int R[3], const double *Cs_in)
 {
-    librpa_set_lri_coeff(get_librpa_handler(h),
-                         taesc_to_librpa_parallel_routing(routing), I, J,
+    librpa_set_lri_coeff(get_librpa_handler(h), LIBRI, I, J,
                          nbasis_i, nbasis_j, naux_mu, R, Cs_in);
 }
 

@@ -4,6 +4,7 @@
 #include "options_bridge.h"
 
 #include <set>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 
@@ -35,11 +36,15 @@ static LibrpaSwitch parse_librpa_switch(const std::string& s)
     throw std::invalid_argument("Invalid switch value: " + s);
 }
 
+} // namespace taesc_internal
+
 void taesc_set_option(TaescOptions *opts, const char *key, const char *value)
 {
     using std::string;
     using std::set;
     using std::unordered_map;
+    using taesc_internal::get_librpa_options;
+    using taesc_internal::parse_librpa_switch;
 
     const string key_s(key), val_s(value);
 
@@ -148,5 +153,3 @@ void taesc_set_option(TaescOptions *opts, const char *key, const char *value)
 }
 
 #undef mem_pair
-
-} // namespace taesc_internal

@@ -8,13 +8,13 @@ namespace taesc_internal
 // manager[0] is a reserved sentinel (always nullptr); real instances start at 1.
 std::vector<std::shared_ptr<TaescHandlerBridge>> manager_hdl_bridge{nullptr};
 
-LibrpaHandler* get_librpa_options(TaescHandler *h)
+LibrpaHandler* get_librpa_handler(TaescHandler *h)
 {
     if (h == nullptr) return nullptr;
     return manager_hdl_bridge.at(h->instance_id_)->librpa_handler;
 }
 
-const LibrpaHandler* get_librpa_options(const TaescHandler *h)
+const LibrpaHandler* get_librpa_handler(const TaescHandler *h)
 {
     if (h == nullptr) return nullptr;
     return manager_hdl_bridge.at(h->instance_id_)->librpa_handler;
