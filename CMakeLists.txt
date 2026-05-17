@@ -17,7 +17,7 @@ set(CMAKE_PROJECT_VERSION "${version}")
 # Public options setup
 option(TAESC_ENABLE_LIBRPA          ""    ON)
 option(TAESC_ENABLE_TEST            ""    OFF)
-option(TAESC_ENABLE_FORTRAN_BIND    ""    OFF)
+option(TAESC_ENABLE_FORTRAN_BIND    ""    ON)
 set(TAESC_FORTRAN_DP "c_double" CACHE STRING "Fortran kind used by LibRPA bindings")
 
 # C++ standard requirement
@@ -33,6 +33,11 @@ target_include_directories(taesc
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
+
+if(TAESC_ENABLE_FORTRAN_BIND)
+  enable_language(Fortran)
+  add_subdirectory(binding/fortran)
+endif()
 
 install(TARGETS taesc
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
