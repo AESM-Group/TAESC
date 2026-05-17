@@ -1,12 +1,13 @@
 # TAESC 用户手册
 
-本文档面向 TAESC 0.1.0 原型版本，介绍软件用途、运行环境、安装构建、命令行驱动、API 集成方式、输入输出、异常处理和常见问题。TAESC 当前主要封装并调度项目内置的 LibRPA 能力；若底层 LibRPA 的接口或数据格式发生变化，请以当前源码和构建产物为准。
+本文档面向 TAESC 0.2.0 原型版本，介绍软件用途、运行环境、安装构建、命令行驱动、API 集成方式、输入输出、异常处理和常见问题。TAESC 当前主要封装并调度项目内置的 LibRPA 能力；若底层 LibRPA 的接口或数据格式发生变化，请以当前源码和构建产物为准。
 
 ## 1. 引言
 
 ### 1.1 编写目的
 
-TAESC 是 **Toolkit for Advanced Electronic Structure Calculations** 的缩写。本手册用于帮助用户完成以下工作：
+TAESC 是高级电子结构计算工具包 (**Toolkit for Advanced Electronic Structure Calculations**) 的缩写。
+本手册用于帮助用户完成以下工作：
 
 1. 理解 TAESC 的定位、功能范围和适用场景。
 2. 在本地或集群环境中构建 TAESC。
