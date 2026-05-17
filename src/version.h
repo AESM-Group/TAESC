@@ -1,5 +1,5 @@
 #pragma once
 
 #define TAESC_MAJOR_VERSION 0
-#define TAESC_MINOR_VERSION 1
+#define TAESC_MINOR_VERSION 2
 #define TAESC_PATCH_VERSION 0
