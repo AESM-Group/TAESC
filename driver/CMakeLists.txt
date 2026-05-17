@@ -1,3 +1,3 @@
-install(PROGRAMS taesc_driver.py
+install(PROGRAMS taesc-driver.py
         DESTINATION ${CMAKE_INSTALL_BINDIR}
         RENAME taesc-driver)

@@ -22,6 +22,13 @@ from typing import Iterable
 
 LIBRPA_DRIVER_NAME = "chi0_main.exe"
 
+IMPOSED_LIBRPA_PARAMS = OrderedDict(
+    [
+        ("output_dir", "taesc.d"),
+        ("parallel_routing", "libri"),
+    ]
+)
+
 SUPPORTED_LIBRPA_TASKS = {
     "rpa": "RPA correlation energy",
     "g0w0": "One-shot G0W0 quasi-particle energies on the k-grid",
@@ -129,6 +136,8 @@ def write_librpa_input(parsed: ParsedInput, task: str, work_dir: Path) -> Path:
     params: "OrderedDict[str, tuple[str, str]]" = OrderedDict(parsed.params)
     params.pop("task", None)
     params.pop("input_dir", None)
+    for key in IMPOSED_LIBRPA_PARAMS:
+        params.pop(key, None)
 
     librpa_input = work_dir / "librpa.in"
     work_dir.mkdir(parents=True, exist_ok=True)
@@ -139,6 +148,7 @@ def write_librpa_input(parsed: ParsedInput, task: str, work_dir: Path) -> Path:
         f"task = {task}",
         f"input_dir = {resolve_input_dir(parsed, work_dir)}",
     ]
+    lines.extend(f"{key} = {value}" for key, value in IMPOSED_LIBRPA_PARAMS.items())
     lines.extend(f"{key} = {value}" for key, value in params.values())
     librpa_input.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return librpa_input
