@@ -39,6 +39,8 @@ if(TAESC_ENABLE_FORTRAN_BIND)
   add_subdirectory(binding/fortran)
 endif()
 
+add_subdirectory(driver)
+
 install(TARGETS taesc
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
@@ -53,5 +55,3 @@ install(FILES
   include/taesc/taesc_input.h
   include/taesc/taesc_options.h
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/taesc)
-
-add_subdirectory(driver)
