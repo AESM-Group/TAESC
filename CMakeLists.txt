@@ -17,8 +17,8 @@ set(CMAKE_PROJECT_VERSION "${version}")
 # Public options setup
 option(TAESC_ENABLE_LIBRPA          ""    ON)
 option(TAESC_ENABLE_TEST            ""    OFF)
-option(TAESC_ENABLE_FORTRAN_BIND    ""    ON)
-option(TAESC_FORTRAN_DP             ""    "c_double")
+option(TAESC_ENABLE_FORTRAN_BIND    ""    OFF)
+set(TAESC_FORTRAN_DP "c_double" CACHE STRING "Fortran kind used by LibRPA bindings")
 
 # C++ standard requirement
 set(CMAKE_CXX_STANDARD 17)
@@ -26,13 +26,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 include(GNUInstallDirs)
 
+add_subdirectory(src)
+
 target_include_directories(taesc
   PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
-
-add_subdirectory(src)
 
 install(TARGETS taesc
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}

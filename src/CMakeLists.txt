@@ -1,8 +1,20 @@
+add_library(taesc
+  taesc/taesc.cpp
+  taesc/compute.cpp
+  taesc/global.cpp
+  taesc/handler_bridge.cpp
+  taesc/handler.cpp
+  taesc/input.cpp
+  taesc/options_bridge.cpp
+  taesc/options.cpp
+)
+
 if(TAESC_ENABLE_LIBRPA)
   add_compile_definitions("TAESC_ENABLE_LIBRPA")
   set(LIBRPA_USE_LIBRI ON)
   set(LIBRPA_USE_CMAKE_INC OFF)
   set(LIBRPA_ENABLE_DRIVER ON)
+  set(ENABLE_GREENX_CTEST OFF)
   set(LIBRPA_ENABLE_FORTRAN_BIND "${TAESC_ENABLE_FORTRAN_BIND}")
   set(LIBRPA_ENABLE_TEST "${TAESC_ENABLE_TEST}")
   set(LIBRPA_FORTRAN_DP "${TAESC_FORTRAN_DP}")
@@ -18,17 +30,6 @@ if(TAESC_ENABLE_LIBRPA)
 
   target_link_libraries(taesc PRIVATE rpa_lib)
 endif()
-
-add_library(taesc
-  taesc/taesc.cpp
-  taesc/compute.cpp
-  taesc/global.cpp
-  taesc/handler_bridge.cpp
-  taesc/handler.cpp
-  taesc/input.cpp
-  taesc/options_bridge.cpp
-  taesc/options.cpp
-)
 
 # if(TARGET MPI::MPI_CXX)
 #   target_link_libraries(taesc PUBLIC MPI::MPI_CXX)
