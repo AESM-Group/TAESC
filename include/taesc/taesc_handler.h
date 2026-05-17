@@ -18,6 +18,7 @@ extern "C" {
 #endif
 
 TaescHandler* taesc_create_handler(MPI_Comm comm);
+
 void taesc_destroy_handler(TaescHandler *h);
 
 #ifdef __cplusplus
