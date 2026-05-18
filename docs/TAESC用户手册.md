@@ -6,7 +6,7 @@
 
 ### 1.1 编写目的
 
-TAESC 是高级电子结构计算工具包 (**Toolkit for Advanced Electronic Structure Calculations**) 的缩写。
+TAESC 是先进电子结构计算套件 (**Toolkit for Advanced Electronic Structure Calculations**) 的缩写。
 本手册用于帮助用户完成以下工作：
 
 1. 理解 TAESC 的定位、功能范围和适用场景。
