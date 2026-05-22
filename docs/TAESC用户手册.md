@@ -11,7 +11,7 @@ TAESC 是先进电子结构计算套件 (**Toolkit for Advanced Electronic Struc
 
 1. 理解 TAESC 的定位、功能范围和适用场景。
 2. 在本地或集群环境中构建 TAESC。
-3. 使用 `taesc-driver` 从文件数据发起 RPA、EXX、G0W0 等后处理计算。
+3. 使用 `taesc-driver` 从文件数据发起 RPA、EXX、$G^0W^0$ 等后处理计算。
 4. 在 C、C++ 或 Fortran 程序中通过 TAESC API 集成高级电子结构计算能力。
 5. 处理常见的输入、构建、运行和并行环境问题。
 
@@ -20,7 +20,7 @@ TAESC 是先进电子结构计算套件 (**Toolkit for Advanced Electronic Struc
 本手册适用于以下用户：
 
 - 使用第一性原理软件导出数据并运行后处理计算的计算材料、计算化学或凝聚态物理用户。
-- 需要在宿主电子结构程序中调用 RPA、EXX、G0W0 能力的开发者。
+- 需要在宿主电子结构程序中调用 RPA、EXX、$G^0W^0$ 能力的开发者。
 - 负责安装 TAESC、配置 MPI/BLAS/LAPACK/ScaLAPACK 环境的系统管理员。
 - 需要评审 TAESC 原型功能、接口和运行流程的测试人员。
 
@@ -35,7 +35,7 @@ TAESC 当前提供两类使用路径：
 
 - RPA 关联能计算。
 - EXX 精确交换势计算。
-- G0W0 准粒子能量和能带计算。
+- $G^0W^0$ 准粒子能量和能带计算。
 
 ### 1.4 术语说明
 
@@ -48,7 +48,7 @@ TAESC 当前提供两类使用路径：
 | RI/LRI | Resolution of Identity / Localized Resolution of Identity，用于降低计算复杂度的辅助基展开技术。 |
 | EXX | Exact Exchange，精确交换。 |
 | RPA | Random Phase Approximation，随机相位近似。 |
-| G0W0 | 非自恰 GW 准粒子修正方法。 |
+| $G^0W^0$ | 非自恰 GW 准粒子修正方法。 |
 | SCF | Self-Consistent Field，自洽场计算。 |
 
 ## 2. 运行环境
@@ -235,8 +235,8 @@ replace_w_head = t
 | 任务 | 说明 |
 | --- | --- |
 | `rpa` | RPA 关联能计算。 |
-| `g0w0` | k 网格上的一次性 G0W0 准粒子能量。 |
-| `g0w0_band` | 一次性 G0W0 准粒子能带。 |
+| `g0w0` | k 网格上的一次性 $G^0W^0$ 准粒子能量。 |
+| `g0w0_band` | 一次性 $G^0W^0$ 准粒子能带。 |
 | `exx` | k 网格上的精确交换计算。 |
 | `exx_band` | 能带 k 点上的精确交换计算。 |
 
@@ -276,9 +276,9 @@ replace_w_head = t
 | `libri_exx_threshold_C` | EXX 计算中 LRI 三中心系数阈值。 |
 | `libri_exx_threshold_D` | EXX 计算中密度矩阵阈值。 |
 | `libri_exx_threshold_V` | EXX 计算中库仑矩阵阈值。 |
-| `libri_g0w0_threshold_C` | G0W0 自能计算中 LRI 三中心系数阈值。 |
-| `libri_g0w0_threshold_G` | G0W0 自能计算中格林函数阈值。 |
-| `libri_g0w0_threshold_Wc` | G0W0 自能计算中屏蔽库仑矩阵阈值。 |
+| `libri_g0w0_threshold_C` | $G^0W^0$ 自能计算中 LRI 三中心系数阈值。 |
+| `libri_g0w0_threshold_G` | $G^0W^0$ 自能计算中格林函数阈值。 |
+| `libri_g0w0_threshold_Wc` | $G^0W^0$ 自能计算中屏蔽库仑矩阵阈值。 |
 
 阈值越大，计算和存储成本通常越低，但结果误差可能增大。生产计算前建议对目标体系做收敛性测试。
 
@@ -325,7 +325,7 @@ python3 /path/to/TAESC-prototype/driver/taesc-driver.py -B /path/to/build -n 4
 `--dry-run` 会打印类似信息：
 
 ```text
-TAESC task       : g0w0_band (One-shot G0W0 quasi-particle band structure)
+TAESC task       : g0w0_band (One-shot $G^0W^0$ quasi-particle band structure)
 LibRPA driver    : /path/to/build/src/LibRPA/chi0_main.exe
 Work directory   : /path/to/work
 Generated input  : /path/to/work/librpa.in
@@ -376,7 +376,7 @@ API 集成的通用流程如下：
 3. 创建并配置 `TaescOptions`。
 4. 创建 `TaescHandler`，并传入 MPI communicator。
 5. 设置 SCF 维度、能级、占据数、波函数、晶格、原子、k 点、RI 系数和库仑矩阵等输入。
-6. 根据任务调用 RPA、EXX、G0W0 或频率网格相关计算函数。
+6. 根据任务调用 RPA、EXX、$G^0W^0$ 或频率网格相关计算函数。
 7. 释放 handler 和 options。
 8. 调用 `taesc_finalize_global()` 或 `taesc::finalize_global()`。
 9. 结束 MPI。
@@ -513,7 +513,7 @@ call MPI_Finalize(ierr)
 | 频率网格 | `taesc_get_imaginary_frequency_grids` | 虚频点和权重。 |
 | RPA | `taesc_get_rpa_correlation_energy` | 总 RPA 关联能及不可约 k 点贡献。 |
 | EXX | `taesc_build_exx`、`taesc_get_exx_pot_kgrid`、`taesc_get_exx_pot_band_k` | k 网格或能带 k 点上的 EXX 势。 |
-| G0W0 | `taesc_build_g0w0_sigma`、`taesc_get_g0w0_sigc_kgrid`、`taesc_get_g0w0_sigc_band_k` | 相关自能实部和虚部。 |
+| $G^0W^0$ | `taesc_build_g0w0_sigma`、`taesc_get_g0w0_sigc_kgrid`、`taesc_get_g0w0_sigc_band_k` | 相关自能实部和虚部。 |
 
 ## 6. 典型操作流程
 
@@ -527,7 +527,7 @@ call MPI_Finalize(ierr)
 6. 去掉 `--dry-run` 发起正式计算。
 7. 查看标准输出、`librpa.in` 和输出目录中的结果文件。
 
-### 6.2 示例：运行 G0W0 能带任务
+### 6.2 示例：运行 $G^0W^0$ 能带任务
 
 准备 `taesc.in`：
 
@@ -633,7 +633,7 @@ API 路径的输出由宿主程序接收，例如数组、返回值或宿主程�
 
 ### Q1：TAESC 和 LibRPA 是什么关系？
 
-TAESC 当前是面向高级电子结构计算的顶层接口和驱动层，主要封装项目内置 LibRPA 的 RPA、EXX、G0W0 等能力。命令行模式会把 `taesc.in` 转换为 `librpa.in`，再调用 LibRPA 驱动。
+TAESC 当前是面向高级电子结构计算的顶层接口和驱动层，主要封装项目内置 LibRPA 的 RPA、EXX、$G^0W^0$ 等能力。命令行模式会把 `taesc.in` 转换为 `librpa.in`，再调用 LibRPA 驱动。
 
 ### Q2：为什么 `--dry-run` 也会生成 `librpa.in`？
 
