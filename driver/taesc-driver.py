@@ -273,14 +273,17 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Generated input  : {generated_input}")
         print(f"Command          : {format_command(command)}")
 
-        if args.dry_run:
-            return 0
-
-        completed = subprocess.run(command, cwd=work_dir, check=False)
-        return completed.returncode
-    except DriverError as exc:
+        returncode = (
+            0
+            if args.dry_run
+            else subprocess.run(command, cwd=work_dir, check=False).returncode
+        )
+    except (DriverError, OSError) as exc:
         print(f"taesc-driver: error: {exc}", file=sys.stderr)
-        return 2
+        returncode = 2
+
+    print("TAESC finished successfully" if returncode == 0 else "Error: TAESC failed")
+    return returncode
 
 
 if __name__ == "__main__":
