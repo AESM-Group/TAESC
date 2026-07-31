@@ -246,24 +246,37 @@ replace_w_head = t
 | --- | --- | --- | --- |
 | `input_dir` | string | `taesc.in` 所在目录 | 输入数据目录。相对路径按 `taesc.in` 所在目录解析。 |
 | `output_dir` | string | `taesc.d` | 结果输出目录。 |
+| `restart_from_dir` | string | `output_dir` | 读取重启检查点的目录；空字符串表示使用输出目录。 |
+| `output_level` | string | `info` | 全局输出级别：`silent`、`critical`、`warn`、`info` 或 `debug`。 |
 | `nfreq` | int | `6` | 虚频积分网格点数。 |
-| `tfgrids_type` | string | 底层默认 | 时间-频率网格类型，可选 `GL`、`GC-I`、`GC-II`、`minimax`、`evenspaced`、`evenspaced_tf`。 |
+| `tfgrids_type` | string | 底层默认 | 时间-频率网格类型，可选 `GL`、`split-GL`、`GC-I`、`GL-II`、`minimax`、`evenspaced`、`evenspaced_tf`。 |
 | `vq_threshold` | double | `0.0` | 库仑矩阵筛选阈值。 |
 | `gf_threshold` | double | `0.0` | 格林函数筛选阈值。 |
 | `use_scalapack_ecrpa` | bool | `true` | RPA 关联能计算是否使用 ScaLAPACK。 |
 
-命令行驱动会把 `task` 和 `input_dir` 之外的参数继续写入生成的 `librpa.in`。因此，某些仅由底层 LibRPA driver 识别的参数也可以放在 `taesc.in` 中；而 API 路径的 `taesc_set_option` 会对参数名做校验，只接受 TAESC 当前封装的选项。
+命令行驱动会把 `task` 和 `input_dir` 之外的参数继续写入生成的 `librpa.in`。因此，某些仅由底层 LibRPA driver 识别的参数也可以放在 `taesc.in` 中。API 路径的 `taesc_set_option` 支持当前 `LibrpaOptions` 的全部公开字段，以及全局 `output_level`；未知参数仍会报错。
 
 ### 4.5 时间频率网格与 GW 参数
 
 | 参数 | 类型 | 默认值 | 说明 |
 | --- | --- | --- | --- |
 | `n_params_anacon` | int | `-1` | 解析延拓使用的参数数量，`-1` 表示按底层默认使用频率数据。 |
+| `n_params_anacon_resample` | int | `-1` | 重采样频率网格的 Padé 参数数量。 |
+| `anacon_tfgrids_type` | string | `unset` | GW 解析延拓可选的独立频率网格类型。 |
+| `anacon_nfreq` | int | `-1` | GW 解析延拓频率网格点数。 |
+| `option_qpe_solver` | int | `0` | 准粒子方程求解器：`0` 残差混合、`1` 准牛顿、`2` 微扰线性化。 |
+| `qpe_solver_thres` | double | `1e-6` | 准粒子方程收敛阈值（Hartree）。 |
+| `qpe_solver_n_iter_max` | int | `10000` | 准粒子方程最大迭代次数。 |
+| `qpe_solver_damp_factor` | double | `0.1` | 准粒子方程更新阻尼因子。 |
+| `use_qpe_adaptive_damp` | bool | `false` | 是否自适应调整准粒子方程阻尼。 |
+| `use_hedin_shift` | bool | `false` | 是否在准粒子求解中计算并使用 Hedin shift。 |
 | `option_dielect_func` | int | `0` | 虚频轴介电函数处理方式。 |
 | `sqrt_coulomb_threshold` | double | `0.0` | 对库仑矩阵做平方根处理时的本征值阈值。 |
 | `use_kpara_scf_eigvec` | bool | `false` | 是否使用按 k 点并行分布的 SCF 本征矢。 |
 | `use_scalapack_gw_wc` | bool | `true` | GW 中计算屏蔽库仑相互作用时是否使用 ScaLAPACK。 |
 | `replace_w_head` | bool | `false` | 是否用宏观介电函数替换介电矩阵 head。 |
+| `sf_gf_omega_shift` | double | `0.01` | 谱函数 Green 函数展宽（Hartree）。 |
+| `sf_sigc_omega_shift` | double | `0.01` | 谱函数相关自能展宽（Hartree）。 |
 
 ### 4.6 LibRI 阈值参数
 
@@ -410,8 +423,8 @@ int main(int argc, char **argv)
     h.set_wg_ekb_efermi(nspins, nkpts, nstates, wg, ekb, efermi);
     h.set_latvec_and_G(lat_mat, G_mat);
     h.set_atoms(types, pos_cart);
-    h.set_kgrids_kvec(nk1, nk2, nk3, kvecs);
-    h.set_ibz_mapping(map_ibzk);
+    h.set_kgrids_kvec(nk1, nk2, nk3, kvecs, kweights);
+    h.set_kq_mapping(map_q_ks);
     h.set_ao_basis_wfc(nbs_wfc);
     h.set_ao_basis_aux(nbs_aux);
 
@@ -498,13 +511,13 @@ call MPI_Finalize(ierr)
 
 | 类别 | 代表函数 | 说明 |
 | --- | --- | --- |
-| SCF 维度与能级 | `taesc_set_scf_dimension`、`taesc_set_wg_ekb_efermi` | 设置自旋数、k 点数、态数、基函数数、占据数、能级和费米能。 |
-| 波函数 | `taesc_set_wfc`、`taesc_set_wfc_packed` | 设置常规 k 点波函数，支持实部/虚部分开或复数打包输入。 |
-| 原子与基组 | `taesc_set_atoms`、`taesc_set_ao_basis_wfc`、`taesc_set_ao_basis_aux` | 设置原子类型、笛卡尔坐标、轨道基和辅助基维度。 |
-| 晶格与 k 点 | `taesc_set_latvec_and_G`、`taesc_set_kgrids_kvec`、`taesc_set_ibz_mapping` | 设置实空间晶格、倒格矢、k 网格和不可约 k 点映射。 |
+| SCF 维度与能级 | `taesc_set_scf_dimension`、`taesc_set_wg_ekb_efermi` | 设置自旋数、k 点数、态数、基函数数、自旋分量数、占据数、能级和费米能。 |
+| 波函数 | `taesc_set_wfc`、`taesc_set_wfc_packed`、`taesc_set_wfc_spinor` | 设置普通或旋量波函数，支持实部/虚部分开或复数打包输入。 |
+| 原子与基组 | `taesc_set_atoms`、`taesc_set_ao_basis_wfc`、`taesc_set_ao_basis_aux`、`taesc_set_ao_basis_aux_shrink` | 设置原子、轨道基、辅助基、压缩辅助基及角动量壳层元数据。 |
+| 晶格、对称性与 k 点 | `taesc_set_latvec_and_G`、`taesc_set_symmetry_operations`、`taesc_set_kgrids_kvec`、`taesc_set_kq_mapping` | 设置晶格、实空间对称操作、已载入 SCF k 点及其到库仑 q 点的映射。 |
 | RI 与库仑矩阵 | `taesc_set_lri_coeff`、`taesc_set_aux_bare_coulomb_k_atom_pair`、`taesc_set_aux_cut_coulomb_k_atom_pair` | 设置 LRI 三中心系数以及裸/截断库仑矩阵。 |
 | 能带数据 | `taesc_set_band_kvec`、`taesc_set_band_occ_eigval`、`taesc_set_wfc_band` | 设置能带路径上的 k 点、占据数、能级和波函数。 |
-| 介电函数 | `taesc_set_dielect_func_imagfreq` | 设置虚频轴上的介电函数，用于特定 GW 处理。 |
+| 介电函数与速度矩阵 | `taesc_set_dielect_func_imagfreq`、`taesc_set_velocity_matrix` | 设置虚频介电函数及 head/wing 修正所需的速度矩阵。 |
 
 ### 5.7 计算函数分类
 
@@ -513,7 +526,7 @@ call MPI_Finalize(ierr)
 | 频率网格 | `taesc_get_imaginary_frequency_grids` | 虚频点和权重。 |
 | RPA | `taesc_get_rpa_correlation_energy` | 总 RPA 关联能及不可约 k 点贡献。 |
 | EXX | `taesc_build_exx`、`taesc_get_exx_pot_kgrid`、`taesc_get_exx_pot_band_k` | k 网格或能带 k 点上的 EXX 势。 |
-| $G^0W^0$ | `taesc_build_g0w0_sigma`、`taesc_get_g0w0_sigc_kgrid`、`taesc_get_g0w0_sigc_band_k` | 相关自能实部和虚部。 |
+| $G^0W^0$ | `taesc_build_g0w0_sigma`、`taesc_get_g0w0_sigc_*`、`taesc_get_g0w0_qpe_*`、`taesc_get_g0w0_spectral_function_*` | 相关自能、准粒子能量和谱函数。 |
 
 ## 6. 典型操作流程
 

@@ -1,1 +1,66 @@
 #pragma once
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#define TAESC_UNSET -101
+#define TAESC_AUTO -51
+
+#define TAESC_SWITCH_OFF 0
+#define TAESC_SWITCH_ON 1
+
+#define TAESC_VERBOSE_DEBUG 4
+#define TAESC_VERBOSE_INFO 3
+#define TAESC_VERBOSE_WARN 2
+#define TAESC_VERBOSE_CRITICAL 1
+#define TAESC_VERBOSE_SILENT 0
+
+typedef enum
+{
+    TAESC_ANGULAR_ORDER_UNSET = TAESC_UNSET,
+    TAESC_ANGULAR_ORDER_NATURAL = 0,
+    TAESC_ANGULAR_ORDER_ABS_PM = 1,
+    TAESC_ANGULAR_ORDER_OPENMX = 2,
+    TAESC_ANGULAR_ORDER_PYSCF = 3,
+} TaescAngularOrder;
+
+typedef enum
+{
+    TAESC_RSH_COEFF_UNSET = TAESC_UNSET,
+    TAESC_RSH_COEFF_1_M = 0,
+    TAESC_RSH_COEFF_M_1 = 1,
+} TaescRshCoeff;
+
+#define TAESC_ROUTING_COUNT 5
+
+typedef enum
+{
+    TAESC_ROUTING_UNSET = TAESC_UNSET,
+    TAESC_ROUTING_AUTO = TAESC_AUTO,
+    TAESC_ROUTING_RTAU = 0,
+    TAESC_ROUTING_ATOMPAIR = 1,
+    TAESC_ROUTING_LIBRI = 2,
+} TaescParallelRouting;
+
+#define TAESC_TFGRID_COUNT 7
+
+typedef enum
+{
+    TAESC_TFGRID_UNSET = TAESC_UNSET,
+    TAESC_TFGRID_GAUSS_LEGENDRE = 0,
+    TAESC_TFGRID_GAUSS_CHEBYSHEV_I = 1,
+    TAESC_TFGRID_GAUSS_CHEBYSHEV_II = 2,
+    TAESC_TFGRID_MINIMAX = 3,
+    TAESC_TFGRID_EVEN_SPACED = 4,
+    TAESC_TFGRID_EVEN_SPACED_TF = 5,
+    TAESC_TFGRID_SPLIT_GAUSS_LEGENDRE = 6,
+} TaescTimeFreqGrid;
+
+typedef int TaescSwitch;
+typedef int TaescKind;
+typedef int TaescVerbose;
+
+#ifdef __cplusplus
+}
+#endif

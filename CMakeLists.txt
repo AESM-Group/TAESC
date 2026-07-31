@@ -41,6 +41,11 @@ endif()
 
 add_subdirectory(driver)
 
+if(TAESC_ENABLE_TEST)
+  enable_testing()
+  add_subdirectory(tests)
+endif()
+
 install(TARGETS taesc
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})

@@ -1,6 +1,6 @@
 module taesc_f03
 
-   use iso_c_binding, only: c_associated, c_char, c_double, c_f_pointer, &
+   use iso_c_binding, only: c_associated, c_char, c_double, c_f_pointer, c_loc, &
       c_int, c_null_char, c_null_ptr, c_ptr, c_size_t
    implicit none
 
@@ -10,7 +10,10 @@ module taesc_f03
    public :: TaescHandler
    public :: taesc_init_global
    public :: taesc_finalize_global
-   ! public :: taesc_print_profile
+   public :: taesc_set_output_level
+   public :: taesc_get_output_level
+   public :: taesc_test
+   public :: taesc_print_profile
    public :: taesc_get_build_info
    public :: taesc_get_major_version
    public :: taesc_get_minor_version
@@ -18,6 +21,39 @@ module taesc_f03
 
    integer, parameter, public :: dp = @TAESC_FORTRAN_DP@
    integer, parameter, public :: TAESC_MAX_STRLEN = 200
+
+   integer, parameter, public :: TAESC_UNSET = -101
+   integer, parameter, public :: TAESC_AUTO = -51
+   integer, parameter, public :: TAESC_SWITCH_OFF = 0
+   integer, parameter, public :: TAESC_SWITCH_ON = 1
+   integer, parameter, public :: TAESC_VERBOSE_DEBUG = 4
+   integer, parameter, public :: TAESC_VERBOSE_INFO = 3
+   integer, parameter, public :: TAESC_VERBOSE_WARN = 2
+   integer, parameter, public :: TAESC_VERBOSE_CRITICAL = 1
+   integer, parameter, public :: TAESC_VERBOSE_SILENT = 0
+   integer, parameter, public :: TAESC_ANGULAR_ORDER_UNSET = TAESC_UNSET
+   integer, parameter, public :: TAESC_ANGULAR_ORDER_NATURAL = 0
+   integer, parameter, public :: TAESC_ANGULAR_ORDER_ABS_PM = 1
+   integer, parameter, public :: TAESC_ANGULAR_ORDER_OPENMX = 2
+   integer, parameter, public :: TAESC_ANGULAR_ORDER_PYSCF = 3
+   integer, parameter, public :: TAESC_RSH_COEFF_UNSET = TAESC_UNSET
+   integer, parameter, public :: TAESC_RSH_COEFF_1_M = 0
+   integer, parameter, public :: TAESC_RSH_COEFF_M_1 = 1
+   integer, parameter, public :: TAESC_ROUTING_UNSET = TAESC_UNSET
+   integer, parameter, public :: TAESC_ROUTING_AUTO = TAESC_AUTO
+   integer, parameter, public :: TAESC_ROUTING_RTAU = 0
+   integer, parameter, public :: TAESC_ROUTING_ATOMPAIR = 1
+   integer, parameter, public :: TAESC_ROUTING_LIBRI = 2
+   integer, parameter, public :: TAESC_ROUTING_COUNT = 5
+   integer, parameter, public :: TAESC_TFGRID_UNSET = TAESC_UNSET
+   integer, parameter, public :: TAESC_TFGRID_GAUSS_LEGENDRE = 0
+   integer, parameter, public :: TAESC_TFGRID_GAUSS_CHEBYSHEV_I = 1
+   integer, parameter, public :: TAESC_TFGRID_GAUSS_CHEBYSHEV_II = 2
+   integer, parameter, public :: TAESC_TFGRID_MINIMAX = 3
+   integer, parameter, public :: TAESC_TFGRID_EVEN_SPACED = 4
+   integer, parameter, public :: TAESC_TFGRID_EVEN_SPACED_TF = 5
+   integer, parameter, public :: TAESC_TFGRID_SPLIT_GAUSS_LEGENDRE = 6
+   integer, parameter, public :: TAESC_TFGRID_COUNT = 7
 
    integer, parameter :: TAESC_BUILD_INFO_MAXLEN = 4096
 
@@ -52,7 +88,7 @@ module taesc_f03
       procedure, public :: set_latvec_and_G => taesc_set_latvec_and_G
       procedure, public :: set_atoms => taesc_set_atoms
       procedure, public :: set_kgrids_kvec => taesc_set_kgrids_kvec
-      procedure, public :: set_ibz_mapping => taesc_set_ibz_mapping
+      procedure, public :: set_kq_mapping => taesc_set_kq_mapping
       procedure, public :: set_lri_coeff => taesc_set_lri_coeff
       procedure, public :: set_aux_bare_coulomb_k_atom_pair
       procedure, public :: set_aux_cut_coulomb_k_atom_pair
@@ -125,22 +161,40 @@ module taesc_f03
          integer(c_int) :: taesc_get_patch_version_c
       end function taesc_get_patch_version_c
 
-      subroutine taesc_init_global_c() bind(c, name="taesc_init_global")
+      subroutine taesc_init_global_c(redirect_stdout, redirect_path, process_output) &
+            bind(c, name="taesc_init_global")
+         import :: c_char, c_int
+         integer(c_int), value :: redirect_stdout, process_output
+         character(kind=c_char), dimension(*), intent(in) :: redirect_path
       end subroutine taesc_init_global_c
+
+      subroutine taesc_set_output_level_c(output_level) &
+            bind(c, name="taesc_set_output_level")
+         import :: c_int
+         integer(c_int), value :: output_level
+      end subroutine taesc_set_output_level_c
+
+      function taesc_get_output_level_c() bind(c, name="taesc_get_output_level")
+         import :: c_int
+         integer(c_int) :: taesc_get_output_level_c
+      end function taesc_get_output_level_c
 
       subroutine taesc_finalize_global_c() bind(c, name="taesc_finalize_global")
       end subroutine taesc_finalize_global_c
+
+      subroutine taesc_test_c() bind(c, name="taesc_test")
+      end subroutine taesc_test_c
 
       subroutine taesc_print_profile_c() bind(c, name="taesc_print_profile")
       end subroutine taesc_print_profile_c
    end interface
 
    interface
-      subroutine taesc_set_scf_dimension_c(h, nspins, nkpts, nstates, nbasis) &
+      subroutine taesc_set_scf_dimension_c(h, nspins, nkpts, nstates, nbasis, nspinor) &
             bind(c, name="taesc_set_scf_dimension")
          import :: c_int, c_ptr
          type(c_ptr), value :: h
-         integer(c_int), value :: nspins, nkpts, nstates, nbasis
+         integer(c_int), value :: nspins, nkpts, nstates, nbasis, nspinor
       end subroutine taesc_set_scf_dimension_c
 
       subroutine taesc_set_wg_ekb_efermi_c(h, nspins, nkpts, nstates, wg, ekb, efermi) &
@@ -162,20 +216,22 @@ module taesc_f03
          real(c_double), dimension(*), intent(in) :: wfc_imag
       end subroutine taesc_set_wfc_c
 
-      subroutine taesc_set_ao_basis_wfc_c(h, natoms, nbs_wfc) &
+      subroutine taesc_set_ao_basis_wfc_c(h, natoms, nbs_wfc, nshells, l_shells) &
             bind(c, name="taesc_set_ao_basis_wfc")
          import :: c_int, c_ptr, c_size_t
          type(c_ptr), value :: h
          integer(c_int), value :: natoms
          integer(c_size_t), dimension(*), intent(in) :: nbs_wfc
+         type(c_ptr), value :: nshells, l_shells
       end subroutine taesc_set_ao_basis_wfc_c
 
-      subroutine taesc_set_ao_basis_aux_c(h, natoms, nbs_aux) &
+      subroutine taesc_set_ao_basis_aux_c(h, natoms, nbs_aux, nshells, l_shells) &
             bind(c, name="taesc_set_ao_basis_aux")
          import :: c_int, c_ptr, c_size_t
          type(c_ptr), value :: h
          integer(c_int), value :: natoms
          integer(c_size_t), dimension(*), intent(in) :: nbs_aux
+         type(c_ptr), value :: nshells, l_shells
       end subroutine taesc_set_ao_basis_aux_c
 
       subroutine taesc_set_latvec_and_G_c(h, lat_mat, g_mat) &
@@ -194,27 +250,28 @@ module taesc_f03
          real(c_double), dimension(*), intent(in) :: pos_cart
       end subroutine taesc_set_atoms_c
 
-      subroutine taesc_set_kgrids_kvec_c(h, nk1, nk2, nk3, kvecs) &
+      subroutine taesc_set_kgrids_kvec_c(h, nk1, nk2, nk3, nkpts, kvecs, kweights) &
             bind(c, name="taesc_set_kgrids_kvec")
          import :: c_double, c_int, c_ptr
          type(c_ptr), value :: h
-         integer(c_int), value :: nk1, nk2, nk3
+         integer(c_int), value :: nk1, nk2, nk3, nkpts
          real(c_double), dimension(*), intent(in) :: kvecs
+         type(c_ptr), value :: kweights
       end subroutine taesc_set_kgrids_kvec_c
 
-      subroutine taesc_set_ibz_mapping_c(h, nkpts, map_ibzk) &
-            bind(c, name="taesc_set_ibz_mapping")
+      subroutine taesc_set_kq_mapping_c(h, nkpts, map_q_ks) &
+            bind(c, name="taesc_set_kq_mapping")
          import :: c_int, c_ptr
          type(c_ptr), value :: h
          integer(c_int), value :: nkpts
-         integer(c_int), dimension(*), intent(in) :: map_ibzk
-      end subroutine taesc_set_ibz_mapping_c
+         integer(c_int), dimension(*), intent(in) :: map_q_ks
+      end subroutine taesc_set_kq_mapping_c
 
       subroutine taesc_set_lri_coeff_c(h, i_atom, j_atom, nao_i, nao_j, &
-            naux_i, r, coeff) bind(c, name="taesc_set_lri_coeff")
+            naux_i, r, coeff, shrink_aux) bind(c, name="taesc_set_lri_coeff")
          import :: c_double, c_int, c_ptr
          type(c_ptr), value :: h
-         integer(c_int), value :: i_atom, j_atom, nao_i, nao_j, naux_i
+         integer(c_int), value :: i_atom, j_atom, nao_i, nao_j, naux_i, shrink_aux
          integer(c_int), dimension(3), intent(in) :: r
          real(c_double), dimension(*), intent(in) :: coeff
       end subroutine taesc_set_lri_coeff_c
@@ -527,13 +584,46 @@ contains
       call this%free()
    end subroutine taesc_handler_finalize
 
-   subroutine taesc_init_global()
-      call taesc_init_global_c()
+   subroutine taesc_init_global(redirect_stdout, redirect_path, process_output)
+      logical, intent(in), optional :: redirect_stdout, process_output
+      character(len=*), intent(in), optional :: redirect_path
+      character(kind=c_char), allocatable :: redirect_path_c(:)
+      integer(c_int) :: redirect_stdout_c, process_output_c
+
+      redirect_stdout_c = 0_c_int
+      process_output_c = 1_c_int
+      if (present(redirect_stdout)) then
+         if (redirect_stdout) redirect_stdout_c = 1_c_int
+      end if
+      if (present(process_output)) then
+         if (.not. process_output) process_output_c = 0_c_int
+      end if
+      if (present(redirect_path)) then
+         redirect_path_c = to_c_string(redirect_path)
+      else
+         redirect_path_c = to_c_string("stdout")
+      end if
+      call taesc_init_global_c(redirect_stdout_c, redirect_path_c, process_output_c)
+      deallocate(redirect_path_c)
    end subroutine taesc_init_global
+
+   subroutine taesc_set_output_level(output_level)
+      integer, intent(in) :: output_level
+
+      call taesc_set_output_level_c(int(output_level, c_int))
+   end subroutine taesc_set_output_level
+
+   integer function taesc_get_output_level() result(output_level)
+      output_level = int(taesc_get_output_level_c())
+   end function taesc_get_output_level
 
    subroutine taesc_finalize_global()
       call taesc_finalize_global_c()
    end subroutine taesc_finalize_global
+
+   subroutine taesc_test()
+      call taesc_test_c()
+   end subroutine taesc_test
 
    subroutine taesc_print_profile()
       call taesc_print_profile_c()
@@ -576,13 +666,17 @@ contains
       version = int(taesc_get_patch_version_c())
    end function taesc_get_patch_version
 
-   subroutine taesc_set_scf_dimension(this, nspins, nkpts, nstates, nbasis)
+   subroutine taesc_set_scf_dimension(this, nspins, nkpts, nstates, nbasis, nspinor)
       class(TaescHandler), intent(inout) :: this
       integer, intent(in) :: nspins, nkpts, nstates, nbasis
+      integer, intent(in), optional :: nspinor
+      integer(c_int) :: nspinor_c
 
       call require_handler(this, "taesc_set_scf_dimension")
+      nspinor_c = 1_c_int
+      if (present(nspinor)) nspinor_c = int(nspinor, c_int)
       call taesc_set_scf_dimension_c(this%ptr_c_handle, int(nspins, c_int), &
-         int(nkpts, c_int), int(nstates, c_int), int(nbasis, c_int))
+         int(nkpts, c_int), int(nstates, c_int), int(nbasis, c_int), nspinor_c)
    end subroutine taesc_set_scf_dimension
 
    subroutine taesc_set_wg_ekb_efermi(this, nspins, nkpts, nstates, wg, ekb, efermi)
@@ -649,9 +743,11 @@ contains
       allocate(nbs_c(natoms))
       nbs_c = int(nbs, kind=c_size_t)
       if (is_aux) then
-         call taesc_set_ao_basis_aux_c(this%ptr_c_handle, int(natoms, c_int), nbs_c)
+         call taesc_set_ao_basis_aux_c(this%ptr_c_handle, int(natoms, c_int), &
+            nbs_c, c_null_ptr, c_null_ptr)
       else
-         call taesc_set_ao_basis_wfc_c(this%ptr_c_handle, int(natoms, c_int), nbs_c)
+         call taesc_set_ao_basis_wfc_c(this%ptr_c_handle, int(natoms, c_int), &
+            nbs_c, c_null_ptr, c_null_ptr)
       end if
       deallocate(nbs_c)
    end subroutine set_ao_basis
@@ -699,39 +795,61 @@ contains
       deallocate(types_c, pos_cart_c)
    end subroutine taesc_set_atoms
 
-   subroutine taesc_set_kgrids_kvec(this, nk1, nk2, nk3, kvecs)
+   subroutine taesc_set_kgrids_kvec(this, nk1, nk2, nk3, kvecs, kweights)
       class(TaescHandler), intent(inout) :: this
       integer, intent(in) :: nk1, nk2, nk3
-      real(dp), intent(in) :: kvecs(3, nk1 * nk2 * nk3)
+      real(dp), intent(in) :: kvecs(:, :)
+      real(dp), intent(in), optional :: kweights(:)
+      integer :: nkpts
       real(c_double), allocatable :: kvecs_c(:,:)
+      real(c_double), allocatable, target :: kweights_c(:)
+      type(c_ptr) :: kweights_ptr
 
       call require_handler(this, "taesc_set_kgrids_kvec")
-      allocate(kvecs_c(3, nk1 * nk2 * nk3))
+      if (size(kvecs, 1) /= 3) then
+         error stop "taesc_set_kgrids_kvec: kvecs must have first dimension 3"
+      end if
+      nkpts = size(kvecs, 2)
+      kweights_ptr = c_null_ptr
+      if (present(kweights)) then
+         if (size(kweights) /= nkpts) then
+            error stop "taesc_set_kgrids_kvec: kweights has wrong size"
+         end if
+         allocate(kweights_c(nkpts))
+         kweights_c = real(kweights, kind=c_double)
+         if (nkpts > 0) kweights_ptr = c_loc(kweights_c(1))
+      end if
+      allocate(kvecs_c(3, nkpts))
       kvecs_c = real(kvecs, kind=c_double)
       call taesc_set_kgrids_kvec_c(this%ptr_c_handle, int(nk1, c_int), &
-         int(nk2, c_int), int(nk3, c_int), kvecs_c)
+         int(nk2, c_int), int(nk3, c_int), int(nkpts, c_int), kvecs_c, &
+         kweights_ptr)
+      if (allocated(kweights_c)) deallocate(kweights_c)
       deallocate(kvecs_c)
    end subroutine taesc_set_kgrids_kvec
 
-   subroutine taesc_set_ibz_mapping(this, nkpts, map_ibzk)
+   subroutine taesc_set_kq_mapping(this, nkpts, map_q_ks)
       class(TaescHandler), intent(inout) :: this
       integer, intent(in) :: nkpts
-      integer, intent(in) :: map_ibzk(nkpts)
-      integer(c_int), allocatable :: map_ibzk_c(:)
+      integer, intent(in) :: map_q_ks(nkpts)
+      integer(c_int), allocatable :: map_q_ks_c(:)
 
-      call require_handler(this, "taesc_set_ibz_mapping")
-      allocate(map_ibzk_c(nkpts))
-      map_ibzk_c = int(map_ibzk, kind=c_int) - 1
-      call taesc_set_ibz_mapping_c(this%ptr_c_handle, int(nkpts, c_int), map_ibzk_c)
-      deallocate(map_ibzk_c)
-   end subroutine taesc_set_ibz_mapping
+      call require_handler(this, "taesc_set_kq_mapping")
+      allocate(map_q_ks_c(nkpts))
+      map_q_ks_c = int(map_q_ks, kind=c_int) - 1
+      call taesc_set_kq_mapping_c(this%ptr_c_handle, int(nkpts, c_int), map_q_ks_c)
+      deallocate(map_q_ks_c)
+   end subroutine taesc_set_kq_mapping
 
-   subroutine taesc_set_lri_coeff(this, i_atom, j_atom, nao_i, nao_j, naux_i, r, coeff)
+   subroutine taesc_set_lri_coeff(this, i_atom, j_atom, nao_i, nao_j, naux_i, &
+         r, coeff, shrink_aux)
       class(TaescHandler), intent(inout) :: this
       integer, intent(in) :: i_atom, j_atom, nao_i, nao_j, naux_i
       integer, intent(in) :: r(3)
       real(dp), contiguous, intent(in) :: coeff(:, :, :)
+      logical, intent(in), optional :: shrink_aux
       integer(c_int) :: r_c(3)
+      integer(c_int) :: shrink_aux_c
       real(c_double), allocatable :: coeff_c(:,:,:)
 
       call require_handler(this, "taesc_set_lri_coeff")
@@ -741,11 +859,15 @@ contains
       if (size(coeff, 3) /= nao_i) error stop "taesc_set_lri_coeff: coeff has wrong shape"
 
       allocate(coeff_c(naux_i, nao_j, nao_i))
+      shrink_aux_c = 0_c_int
+      if (present(shrink_aux)) then
+         if (shrink_aux) shrink_aux_c = 1_c_int
+      end if
       r_c = int(r, kind=c_int)
       coeff_c = real(coeff, kind=c_double)
       call taesc_set_lri_coeff_c(this%ptr_c_handle, int(i_atom - 1, c_int), &
          int(j_atom - 1, c_int), int(nao_i, c_int), int(nao_j, c_int), &
-         int(naux_i, c_int), r_c, coeff_c)
+         int(naux_i, c_int), r_c, coeff_c, shrink_aux_c)
       deallocate(coeff_c)
    end subroutine taesc_set_lri_coeff
 

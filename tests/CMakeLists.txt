@@ -1,0 +1,3 @@
+add_executable(test_taesc_options test_options.cpp)
+target_link_libraries(test_taesc_options PRIVATE taesc)
+add_test(NAME taesc_options COMMAND test_taesc_options)

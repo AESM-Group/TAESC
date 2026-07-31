@@ -74,6 +74,31 @@ void taesc_get_g0w0_sigc_kgrid(
                                i_state_high, vxc, vexx, sigc_re, sigc_im);
 }
 
+void taesc_get_g0w0_qpe_kgrid(
+    TaescHandler *h, const TaescOptions *p_opts, const int n_spins,
+    const int n_kpts_this, const int *iks_this, int i_state_low,
+    int i_state_high, const double *vxc, const double *vexx,
+    double *sigc_re, double *sigc_im, double *eqp)
+{
+    librpa_get_g0w0_qpe_kgrid(
+        get_librpa_handler(h), get_librpa_options(p_opts), n_spins,
+        n_kpts_this, iks_this, i_state_low, i_state_high, vxc, vexx,
+        sigc_re, sigc_im, eqp);
+}
+
+void taesc_get_g0w0_spectral_function_kgrid(
+    TaescHandler *h, const TaescOptions *p_opts, const int n_spins,
+    const int n_kpts_this, const int *iks_this, int i_state_low,
+    int i_state_high, const int n_omegas, const double *omegas,
+    const double *vxc, const double *vexx, double *spectral_function,
+    double *sigc)
+{
+    librpa_get_g0w0_spectral_function_kgrid(
+        get_librpa_handler(h), get_librpa_options(p_opts), n_spins,
+        n_kpts_this, iks_this, i_state_low, i_state_high, n_omegas, omegas,
+        vxc, vexx, spectral_function, sigc);
+}
+
 void taesc_get_g0w0_sigc_band_k(
     TaescHandler *h, const TaescOptions *p_opts, const int n_spins,
     const int n_kpts_band_this, const int *iks_band_this, int i_state_low,
@@ -85,4 +110,30 @@ void taesc_get_g0w0_sigc_band_k(
                                 n_kpts_band_this, iks_band_this,
                                 i_state_low, i_state_high, vxc_band,
                                 vexx_band, sigc_band_re, sigc_band_im);
+}
+
+void taesc_get_g0w0_qpe_band_k(
+    TaescHandler *h, const TaescOptions *p_opts, const int n_spins,
+    const int n_kpts_band_this, const int *iks_band_this, int i_state_low,
+    int i_state_high, const double *vxc_band, const double *vexx_band,
+    double *sigc_band_re, double *sigc_band_im, double *eqp_band)
+{
+    librpa_get_g0w0_qpe_band_k(
+        get_librpa_handler(h), get_librpa_options(p_opts), n_spins,
+        n_kpts_band_this, iks_band_this, i_state_low, i_state_high,
+        vxc_band, vexx_band, sigc_band_re, sigc_band_im, eqp_band);
+}
+
+void taesc_get_g0w0_spectral_function_band_k(
+    TaescHandler *h, const TaescOptions *p_opts, const int n_spins,
+    const int n_kpts_band_this, const int *iks_band_this, int i_state_low,
+    int i_state_high, const int n_omegas, const double *omegas,
+    const double *vxc_band, const double *vexx_band,
+    double *spectral_function_band, double *sigc_band)
+{
+    librpa_get_g0w0_spectral_function_band_k(
+        get_librpa_handler(h), get_librpa_options(p_opts), n_spins,
+        n_kpts_band_this, iks_band_this, i_state_low, i_state_high,
+        n_omegas, omegas, vxc_band, vexx_band, spectral_function_band,
+        sigc_band);
 }
