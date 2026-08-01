@@ -271,7 +271,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"LibRPA driver    : {driver_exe}")
         print(f"Work directory   : {work_dir}")
         print(f"Generated input  : {generated_input}")
-        print(f"Command          : {format_command(command)}")
+        print(f"Command          : {format_command(command)}", flush=True)
 
         returncode = (
             0
