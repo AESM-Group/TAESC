@@ -1,3 +1,10 @@
 add_executable(test_taesc_options test_options.cpp)
 target_link_libraries(test_taesc_options PRIVATE taesc)
 add_test(NAME taesc_options COMMAND test_taesc_options)
+
+if(TAESC_ENABLE_LIBRPA AND TAESC_ENABLE_FORTRAN_BIND)
+  add_executable(test_taesc_f03_rpa test_f03_rpa.f90)
+  target_link_libraries(test_taesc_f03_rpa PRIVATE taesc_f03_lib)
+  add_test(NAME taesc_f03_rpa COMMAND test_taesc_f03_rpa)
+  set_tests_properties(taesc_f03_rpa PROPERTIES PASS_REGULAR_EXPRESSION "test_f03_rpa succeeded")
+endif()
