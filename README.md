@@ -16,3 +16,7 @@
 ```
 
 Obtained with `tree --dirsfirst --charset=ascii -F`.
+
+## Dependencies
+
+LibRPA downloads greenX, ELPA and LibDDLA at configure time. For offline builds run `scripts/prepare_thirdparty.sh` on a connected machine, copy `thirdparty/archives/` to the build host and configure with `-DLIBRPA_THIRDPARTY_DOWNLOAD=OFF`. CMake 3.18 or newer is required.

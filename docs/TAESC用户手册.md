@@ -1,6 +1,6 @@
 # TAESC 用户手册
 
-本文档面向 TAESC 0.2.0 原型版本，介绍软件用途、运行环境、安装构建、命令行驱动、API 集成方式、输入输出、异常处理和常见问题。TAESC 当前主要封装并调度项目内置的 LibRPA 能力；若底层 LibRPA 的接口或数据格式发生变化，请以当前源码和构建产物为准。
+本文档面向 TAESC 0.3.0 原型版本（升级中，内置 LibRPA 0.9.0 之后的 master 版本，提交 `7182c0b`），介绍软件用途、运行环境、安装构建、命令行驱动、API 集成方式、输入输出、异常处理和常见问题。TAESC 当前主要封装并调度项目内置的 LibRPA 能力；若底层 LibRPA 的接口或数据格式发生变化，请以当前源码和构建产物为准。
 
 ## 1. 引言
 
@@ -73,7 +73,7 @@ TAESC 面向中小规模本地测试和高性能计算集群运行。实际硬�
 - 支持 Fortran 2003 的 Fortran 编译器。
 - MPI 编译和运行环境，例如 OpenMPI、MPICH、Intel MPI。
 - BLAS、LAPACK 和 ScaLAPACK。
-- CMake 3.13 或更高版本。
+- CMake 3.18 或更高版本。
 - Python 3，用于运行 `driver/taesc-driver.py` 或安装后的 `taesc-driver`。
 
 项目内已包含或通过源码树配置的组件包括：
@@ -81,6 +81,8 @@ TAESC 面向中小规模本地测试和高性能计算集群运行。实际硬�
 - `src/LibRPA`：底层 RPA/GW 功能。
 - `src/LibRI` 和 `src/LibComm`：LibRI 相关能力。
 - `thirdparty/cereal-d81e2f7`：序列化依赖。
+
+greenX、ELPA（以及 HIP/CUDA 构建所需的 LibDDLA）不再随源码树提供，LibRPA 会在 CMake 配置阶段下载到 `src/LibRPA/thirdparty/{downloads,src}`。TAESC 将归档目录 `LIBRPA_THIRDPARTY_ARCHIVE_DIR` 默认设为 `thirdparty/archives`，重建构建目录后无需重新下载。
 
 ### 2.3 运行前检查
 
@@ -142,6 +144,21 @@ cmake --build build -j 4
 ```
 
 在 macOS、Linux 或集群环境中，编译器包装器和库路径可能不同，需要按本机路径调整命令行变量。
+
+#### 离线构建
+
+计算节点通常无法访问外网。请先在可联网的机器上准备第三方源码归档，再复制到构建机器的 `thirdparty/archives/`：
+
+```bash
+scripts/prepare_thirdparty.sh "greenX;ELPA"          # CPU 构建
+scripts/prepare_thirdparty.sh "greenX;ELPA;LibDDLA"  # HIP/CUDA 构建
+```
+
+配置时加入 `-DLIBRPA_THIRDPARTY_DOWNLOAD=OFF`，归档缺失时会在配置阶段立即报错，而不会在计算节点上卡住。
+
+#### ELPA 选项
+
+使用 `LIBRPA_USE_ELPA=ON` 启用 ELPA。旧选项 `LIBRPA_USE_EXTERNAL_ELPA`、`LIBRPA_USE_BUNDLED_ELPA` 已弃用，`LIBRPA_BUNDLED_ELPA_*` 已改名为 `LIBRPA_ELPA_*`（如 `LIBRPA_ELPA_OPENMP`、`LIBRPA_ELPA_CONFIGURE_ARGS`、`LIBRPA_ELPA_LIBS`）。`LIBRPA_USE_CMAKE_INC` 已移除。
 
 ### 3.4 安装
 
@@ -235,10 +252,14 @@ replace_w_head = t
 | 任务 | 说明 |
 | --- | --- |
 | `rpa` | RPA 关联能计算。 |
-| `g0w0` | k 网格上的一次性 $G^0W^0$ 准粒子能量。 |
-| `g0w0_band` | 一次性 $G^0W^0$ 准粒子能带。 |
+| `g0w0` | 一次性 $G^0W^0$ 计算；输入数据包含能带路径时也会计算准粒子能带。 |
+| `g0w0_band` | 与 `g0w0` 等价的兼容任务名。 |
 | `exx` | k 网格上的精确交换计算。 |
 | `exx_band` | 能带 k 点上的精确交换计算。 |
+| `hartree` | 周期体系 Hartree 矩阵。 |
+| `qsgw` | 准粒子自洽 GW。原 `qsgw_band` 已移除，使用该任务名会报错并提示改用 `qsgw`。 |
+| `crpa` | 约束 RPA（上游标注为实验功能）。 |
+| `print_minimax` | 生成并输出 minimax 时间-频率网格。 |
 
 ### 4.4 常用可选参数
 
@@ -248,7 +269,7 @@ replace_w_head = t
 | `output_dir` | string | `taesc.d` | 结果输出目录。 |
 | `restart_from_dir` | string | `output_dir` | 读取重启检查点的目录；空字符串表示使用输出目录。 |
 | `output_level` | string | `info` | 全局输出级别：`silent`、`critical`、`warn`、`info` 或 `debug`。 |
-| `nfreq` | int | `6` | 虚频积分网格点数。 |
+| `nfreq` | int | `16` | 虚频积分网格点数。 |
 | `tfgrids_type` | string | 底层默认 | 时间-频率网格类型，可选 `GL`、`split-GL`、`GC-I`、`GL-II`、`minimax`、`evenspaced`、`evenspaced_tf`。 |
 | `vq_threshold` | double | `0.0` | 库仑矩阵筛选阈值。 |
 | `gf_threshold` | double | `0.0` | 格林函数筛选阈值。 |
@@ -264,6 +285,15 @@ replace_w_head = t
 | `n_params_anacon_resample` | int | `-1` | 重采样频率网格的 Padé 参数数量。 |
 | `anacon_tfgrids_type` | string | `unset` | GW 解析延拓可选的独立频率网格类型。 |
 | `anacon_nfreq` | int | `-1` | GW 解析延拓频率网格点数。 |
+| `anacon_method` | string | `pade` | 解析延拓方法：`pade`、`aaa` 或 `ridge`。 |
+| `anacon_aaa_tolerance` | double | 底层默认 | AAA 解析延拓的容差。 |
+| `anacon_ridge_lambda` | double | 底层默认 | ridge 解析延拓的正则化系数。 |
+| `anacon_ridge_den_weight` | double | 底层默认 | ridge 解析延拓的分母权重。 |
+| `chi0_method` | string | `unset` | 极化率计算方法：`unset`、`auto`、`space_time`（实空间-虚时）或 `conventional`（倒空间-虚频）。 |
+| `n_bands_exclude_chi0` | int | `0` | 计算极化率时排除的能带数。 |
+| `n_bands_exclude_sigc` | int | `0` | 计算相关自能时排除的能带数。 |
+| `output_exx_mat_k` | bool | `false` | 输出 k 空间 EXX 矩阵。 |
+| `output_exx_mat_r` | bool | `false` | 输出实空间 EXX 矩阵。 |
 | `option_qpe_solver` | int | `0` | 准粒子方程求解器：`0` 残差混合、`1` 准牛顿、`2` 微扰线性化。 |
 | `qpe_solver_thres` | double | `1e-6` | 准粒子方程收敛阈值（Hartree）。 |
 | `qpe_solver_n_iter_max` | int | `10000` | 准粒子方程最大迭代次数。 |
@@ -513,9 +543,9 @@ call MPI_Finalize(ierr)
 | --- | --- | --- |
 | SCF 维度与能级 | `taesc_set_scf_dimension`、`taesc_set_wg_ekb_efermi` | 设置自旋数、k 点数、态数、基函数数、自旋分量数、占据数、能级和费米能。 |
 | 波函数 | `taesc_set_wfc`、`taesc_set_wfc_packed`、`taesc_set_wfc_spinor` | 设置普通或旋量波函数，支持实部/虚部分开或复数打包输入。 |
-| 原子与基组 | `taesc_set_atoms`、`taesc_set_ao_basis_wfc`、`taesc_set_ao_basis_aux`、`taesc_set_ao_basis_aux_shrink` | 设置原子、轨道基、辅助基、压缩辅助基及角动量壳层元数据。 |
+| 原子与基组 | `taesc_set_atoms`、`taesc_set_ao_basis_wfc`、`taesc_set_ao_basis_aux`、`taesc_set_ao_basis_aux_shrink`、`taesc_set_basis_convention` | 设置原子、轨道基、辅助基、压缩辅助基、角动量壳层元数据和基函数约定。 |
 | 晶格、对称性与 k 点 | `taesc_set_latvec_and_G`、`taesc_set_symmetry_operations`、`taesc_set_kgrids_kvec`、`taesc_set_kq_mapping` | 设置晶格、实空间对称操作、已载入 SCF k 点及其到库仑 q 点的映射。 |
-| RI 与库仑矩阵 | `taesc_set_lri_coeff`、`taesc_set_aux_bare_coulomb_k_atom_pair`、`taesc_set_aux_cut_coulomb_k_atom_pair` | 设置 LRI 三中心系数以及裸/截断库仑矩阵。 |
+| RI 与库仑矩阵 | `taesc_set_lri_coeff`、`taesc_set_aux_*_coulomb_k_atom_pair*`、`taesc_set_aux_*_coulomb_k_2d_block*` | 设置 LRI 三中心系数以及裸/截断库仑矩阵；库仑矩阵支持原子对或全局二维块输入，也支持打包复数数组。 |
 | 能带数据 | `taesc_set_band_kvec`、`taesc_set_band_occ_eigval`、`taesc_set_wfc_band` | 设置能带路径上的 k 点、占据数、能级和波函数。 |
 | 介电函数与速度矩阵 | `taesc_set_dielect_func_imagfreq`、`taesc_set_velocity_matrix` | 设置虚频介电函数及 head/wing 修正所需的速度矩阵。 |
 
@@ -660,13 +690,23 @@ TAESC 当前是面向高级电子结构计算的顶层接口和驱动层，主�
 
 `nfreq` 控制虚频积分网格数。较大的 `nfreq` 通常提高精度但增加计算量。建议从小体系测试开始，对目标物理量做收敛性检查。
 
+### Q4a：从 0.3.0 升级需要注意什么？
+
+- `nfreq` 默认值由 6 改为 16。未显式给出 `nfreq` 的输入，计算结果会改变；记录参考值时请写明 `nfreq`。
+- `output_gw_sigc_mat_kf` 输出稠密二进制 `.bin`，不再是 Matrix Market `.mtx`。
+- `task = qsgw_band` 改为 `task = qsgw`，`qsgw_band0_*` 参数已改名；QSGW 的 Hartree 反馈和完整哈密顿量导出默认开启。
+- `input_preset = abacus` 使用 reader-v1 文件名；旧版 ABACUS 导出请使用 `abacus-legacy`。
+- 若干修复可能改变数值：Padé 对零值或重复采样点的回退、滤波库仑的 head/wing、RPA 的分布式 log-det、`rtau` 多 q 的 `map::at` 失败、shrink-ABF 的全 BZ `W(R)`。
+- `LibrpaOptions` 的大小改变（ABI 变化），链接 `libtaesc` 的宿主程序需要重新编译。
+- CMake 最低版本升为 3.18；第三方依赖的获取和 ELPA 选项见 3.3 节。
+
 ### Q5：API 和命令行能混用吗？
 
 通常二者是两种入口。命令行从文件数据启动底层驱动；API 由宿主程序直接传入内存数据。一次具体计算一般选择其中一种路径。
 
 ### Q6：如何确认当前库版本？
 
-C 接口可调用 `taesc_get_major_version()`、`taesc_get_minor_version()`、`taesc_get_patch_version()`；C++ 接口可调用 `taesc::get_major_version()` 等函数。当前源码版本号定义在 `src/version.h`。
+C 接口可调用 `taesc_get_major_version()`、`taesc_get_minor_version()`、`taesc_get_patch_version()`；C++ 接口可调用 `taesc::get_major_version()` 等函数。`taesc_get_build_info()`、`taesc::get_build_info()` 和 Fortran 的 `taesc_get_build_info()` 还可返回构建信息。当前源码版本号定义在 `src/version.h`。
 
 ## 11. 附录
 
