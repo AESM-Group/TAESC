@@ -35,6 +35,9 @@ SUPPORTED_LIBRPA_TASKS = {
     "g0w0_band": "One-shot G0W0 quasi-particle band structure",
     "exx": "Exact exchange on the k-grid",
     "exx_band": "Exact exchange on band k-points",
+    "hartree": "Periodic Hartree matrices",
+    "qsgw": "Quasi-particle self-consistent GW",
+    "crpa": "Constrained RPA (experimental)",
     "print_minimax": "Print minimax time-frequency grids",
 }
 
@@ -111,6 +114,8 @@ def validate_task(parsed: ParsedInput) -> str:
         raise DriverError("taesc.in must define a 'task' parameter")
 
     task = normalize_task(task_raw)
+    if task == "qsgw_band":
+        raise DriverError("task 'qsgw_band' was removed in LibRPA 0.8; use 'qsgw'")
     if task in SUPPORTED_LIBRPA_TASKS:
         return task
 
