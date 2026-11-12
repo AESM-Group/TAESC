@@ -7,3 +7,6 @@
 [submodule "src/LibRI"]
 	path = src/LibRI
 	url = https://github.com/abacusmodeling/LibRI.git
+[submodule "src/LibDDLA"]
+	path = src/LibDDLA
+	url = https://github.com/userchba/LibDDLA.git
