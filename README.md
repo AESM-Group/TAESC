@@ -19,4 +19,4 @@ Obtained with `tree --dirsfirst --charset=ascii -F`.
 
 ## Dependencies
 
-LibRPA downloads greenX, ELPA and LibDDLA at configure time. For offline builds run `scripts/prepare_thirdparty.sh` on a connected machine, copy `thirdparty/archives/` to the build host and configure with `-DLIBRPA_THIRDPARTY_DOWNLOAD=OFF`. CMake 3.18 or newer is required.
+Clone with `git clone --recursive` and run `git lfs pull`. LibRPA, LibRI, LibComm and LibDDLA are submodules under `src/`, cereal is in `thirdparty/cereal-d81e2f7`, and the pinned greenX and ELPA archives are in `thirdparty/archives/` (Git LFS). LibRPA uses LibRI, LibComm and cereal from this tree, and configuration does not download anything. Use `scripts/prepare_thirdparty.sh` to refresh the archives. CMake 3.18 or newer is required.
