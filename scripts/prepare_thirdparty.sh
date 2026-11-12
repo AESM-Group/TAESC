@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Download LibRPA third-party source archives for offline builds.
 # Run on a machine with network access, then copy thirdparty/archives/ to the
-# build host and configure with -DLIBRPA_THIRDPARTY_DOWNLOAD=OFF.
+# build host and configure with -DTAESC_THIRDPARTY_DOWNLOAD=OFF.
 # Usage: scripts/prepare_thirdparty.sh [COMPONENTS]   (default: "greenX;ELPA")
 # Add LibDDLA to COMPONENTS for HIP/CUDA builds.
 set -euo pipefail
