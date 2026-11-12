@@ -81,9 +81,9 @@ TAESC 面向中小规模本地测试和高性能计算集群运行。实际硬�
 - `src/LibRPA`：底层 RPA/GW 功能（子模块）。
 - `src/LibRI`、`src/LibComm` 和 `src/LibDDLA`：子模块。LibRPA 直接使用这些源码树，不会下载或打补丁；LibDDLA 仅在 HIP/CUDA 构建中使用。
 - `thirdparty/cereal-d81e2f7`：序列化依赖。
-- `thirdparty/archives/`：固定版本的 greenX 和 ELPA 源码归档（Git LFS）。LibRPA 在配置阶段校验 SHA-256、解压并打补丁。
+- greenX 和 ELPA 由 LibRPA 管理：配置阶段下载固定版本的源码归档，校验 SHA-256，解压并打补丁。归档缓存在 `thirdparty/archives/`（不纳入 Git）。
 
-请使用 `git clone --recursive` 获取源码，并执行 `git lfs pull`。若子模块或 LFS 归档缺失，CMake 配置会立即报错并给出对应命令。
+请使用 `git clone --recursive` 获取源码。若子模块未初始化，CMake 配置会立即报错并给出对应命令。首次配置需要联网下载 greenX 和 ELPA；离线构建见 3.3 节。
 
 ### 2.3 运行前检查
 
@@ -148,7 +148,7 @@ cmake --build build -j 4
 
 #### 第三方依赖与离线构建
 
-所有第三方源码都随仓库提供，配置阶段默认不联网（`LIBRPA_THIRDPARTY_DOWNLOAD=OFF`），因此计算节点上无需额外准备。仅在更新 greenX 或 ELPA 版本时，才需在可联网的机器上运行 `scripts/prepare_thirdparty.sh`，刷新 `thirdparty/archives/` 并提交。
+greenX 和 ELPA 在首次配置时由 LibRPA 下载，并缓存在 `thirdparty/archives/`，之后重建构建目录无需重新下载。计算节点通常无法访问外网，请先在可联网的机器上运行 `scripts/prepare_thirdparty.sh`（HIP/CUDA 构建仍使用 `src/LibDDLA`，无需下载），把 `thirdparty/archives/` 复制到构建机器，再加入 `-DLIBRPA_THIRDPARTY_DOWNLOAD=OFF` 配置。归档缺失时会在配置阶段立即报错，而不会在计算节点上卡住。
 
 LibRI、LibComm 和 cereal 以 CMake 目标的形式提供给 LibRPA，此时 `LIBRPA_MPI_THREAD_LEVEL` 为空会自动选择 `MPI_THREAD_MULTIPLE`；在集群上建议显式设置该选项。
 
@@ -694,7 +694,7 @@ TAESC 当前是面向高级电子结构计算的顶层接口和驱动层，主�
 - `input_preset = abacus` 使用 reader-v1 文件名；旧版 ABACUS 导出请使用 `abacus-legacy`。
 - 若干修复可能改变数值：Padé 对零值或重复采样点的回退、滤波库仑的 head/wing、RPA 的分布式 log-det、`rtau` 多 q 的 `map::at` 失败、shrink-ABF 的全 BZ `W(R)`。
 - `LibrpaOptions` 的大小改变（ABI 变化），链接 `libtaesc` 的宿主程序需要重新编译。
-- CMake 最低版本升为 3.18；新增 `src/LibDDLA` 子模块和 `thirdparty/archives/`（Git LFS），第三方依赖和 ELPA 选项见 2.2 与 3.3 节。
+- CMake 最低版本升为 3.18；新增 `src/LibDDLA` 子模块；greenX 和 ELPA 由 LibRPA 下载并缓存在 `thirdparty/archives/`，第三方依赖和 ELPA 选项见 2.2 与 3.3 节。
 
 ### Q5：API 和命令行能混用吗？
 

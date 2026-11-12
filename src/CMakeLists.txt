@@ -43,18 +43,14 @@ if(TAESC_ENABLE_LIBRPA)
     set(LIBDDLA_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/LibDDLA" CACHE PATH "LibDDLA source tree")
   endif()
 
-  # greenX and ELPA archives are committed in thirdparty/archives (Git LFS).
-  # Downloads are off by default, so that a missing archive fails at once.
+  # greenX and ELPA are managed by LibRPA: it downloads the pinned archives,
+  # checks their SHA-256, applies its patches and builds them. Keep the archive
+  # cache in thirdparty/archives (not tracked) so that it survives rebuilding
+  # the build directory. For offline builds, fill it with
+  # scripts/prepare_thirdparty.sh and configure with
+  # -DLIBRPA_THIRDPARTY_DOWNLOAD=OFF.
   set(LIBRPA_THIRDPARTY_ARCHIVE_DIR "${CMAKE_SOURCE_DIR}/thirdparty/archives"
       CACHE PATH "Directory of LibRPA third-party source archives")
-  set(LIBRPA_THIRDPARTY_DOWNLOAD OFF CACHE BOOL "Download missing third-party archives")
-  file(GLOB _taesc_archives "${LIBRPA_THIRDPARTY_ARCHIVE_DIR}/*.tar.gz")
-  foreach(_archive IN LISTS _taesc_archives)
-    file(READ "${_archive}" _head LIMIT 32)
-    if(_head MATCHES "^version https://git-lfs")
-      message(FATAL_ERROR "${_archive} is a Git LFS pointer. Run `git lfs pull`.")
-    endif()
-  endforeach()
   add_subdirectory(LibRPA)
 
   target_include_directories(taesc
