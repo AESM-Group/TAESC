@@ -1,6 +1,6 @@
 #include <taesc/taesc_options.h>
-#include "../LibRPA/include/librpa_global.h"
-#include "../LibRPA/include/librpa_options.h"
+#include <librpa_global.h>
+#include <librpa_options.h>
 
 #include "options_bridge.h"
 
@@ -43,6 +43,7 @@ static LibrpaTimeFreqGrid parse_librpa_tfgrid(const std::string& s)
         {"GL", LIBRPA_TFGRID_GAUSS_LEGENDRE},
         {"split-GL", LIBRPA_TFGRID_SPLIT_GAUSS_LEGENDRE},
         {"GC-I", LIBRPA_TFGRID_GAUSS_CHEBYSHEV_I},
+        // "GL-II" is the spelling used by the LibRPA driver
         {"GL-II", LIBRPA_TFGRID_GAUSS_CHEBYSHEV_II},
         {"GC-II", LIBRPA_TFGRID_GAUSS_CHEBYSHEV_II},
         {"minimax", LIBRPA_TFGRID_MINIMAX},
@@ -119,6 +120,29 @@ void taesc_set_option(TaescOptions *opts, const char *key, const char *value)
         p_opts_librpa->anacon_tfgrids_type = parse_librpa_tfgrid(val_s);
         return;
     }
+    if (key_s == "chi0_method")
+    {
+        static const unordered_map<string, LibrpaMethod> kv
+        {
+            {"unset", LIBRPA_METHOD_UNSET},
+            {"auto", LIBRPA_METHOD_AUTO},
+            {"space_time", LIBRPA_METHOD_SPACE_TIME},
+            {"conventional", LIBRPA_METHOD_CONVENTIONAL},
+        };
+        p_opts_librpa->chi0_method = kv.at(val_s);
+        return;
+    }
+    if (key_s == "anacon_method")
+    {
+        static const unordered_map<string, LibrpaAnalyContMethod> kv
+        {
+            {"pade", LIBRPA_ANACON_PADE},
+            {"aaa", LIBRPA_ANACON_AAA},
+            {"ridge", LIBRPA_ANACON_RIDGE},
+        };
+        p_opts_librpa->anacon_method = kv.at(val_s);
+        return;
+    }
     if (key_s == "rpa_headwing_mode")
     {
         if (val_s != "qavg" && val_s != "head_only")
@@ -134,6 +158,8 @@ void taesc_set_option(TaescOptions *opts, const char *key, const char *value)
         mem_pair(LibrpaOptions, nfreq),
         mem_pair(LibrpaOptions, n_bands_chi0),
         mem_pair(LibrpaOptions, n_bands_sigc),
+        mem_pair(LibrpaOptions, n_bands_exclude_chi0),
+        mem_pair(LibrpaOptions, n_bands_exclude_sigc),
         mem_pair(LibrpaOptions, option_bvk_remap),
         mem_pair(LibrpaOptions, libri_chi0_collect_s0_chunk),
         mem_pair(LibrpaOptions, n_params_anacon),
@@ -166,6 +192,9 @@ void taesc_set_option(TaescOptions *opts, const char *key, const char *value)
 
     static const unordered_map<string, double LibrpaOptions::*> map_librpa_opts_double{
         mem_pair(LibrpaOptions, vq_threshold),
+        mem_pair(LibrpaOptions, anacon_aaa_tolerance),
+        mem_pair(LibrpaOptions, anacon_ridge_lambda),
+        mem_pair(LibrpaOptions, anacon_ridge_den_weight),
         mem_pair(LibrpaOptions, tfgrids_freq_min),
         mem_pair(LibrpaOptions, tfgrids_freq_max),
         mem_pair(LibrpaOptions, tfgrids_freq_interval),
@@ -223,6 +252,8 @@ void taesc_set_option(TaescOptions *opts, const char *key, const char *value)
         mem_pair(LibrpaOptions, output_gw_sigc_ks_kf),
         mem_pair(LibrpaOptions, output_gw_sigc_ks_mat_kf),
         mem_pair(LibrpaOptions, output_exx_ks_mat_k),
+        mem_pair(LibrpaOptions, output_exx_mat_k),
+        mem_pair(LibrpaOptions, output_exx_mat_r),
         mem_pair(LibrpaOptions, output_gw_sigc_mat_kf),
         mem_pair(LibrpaOptions, output_gw_sigc_mat_rt),
         mem_pair(LibrpaOptions, output_gw_sigc_mat_rf),

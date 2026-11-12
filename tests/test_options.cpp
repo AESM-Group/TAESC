@@ -13,6 +13,15 @@ int main()
     opts.set("qpe_solver_thres", "1e-7");
     opts.set("use_qpe_adaptive_damp", "true");
     opts.set("rpa_headwing_mode", "head_only");
+    opts.set("chi0_method", "conventional");
+    opts.set("anacon_method", "aaa");
+    opts.set("anacon_aaa_tolerance", "1e-10");
+    opts.set("anacon_ridge_lambda", "1e-6");
+    opts.set("anacon_ridge_den_weight", "0.5");
+    opts.set("n_bands_exclude_chi0", "2");
+    opts.set("n_bands_exclude_sigc", "3");
+    opts.set("output_exx_mat_k", "true");
+    opts.set("output_exx_mat_r", "on");
 
     if (taesc::get_output_level() != TAESC_VERBOSE_WARN) return 2;
 
