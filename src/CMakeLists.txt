@@ -17,13 +17,44 @@ if(TAESC_ENABLE_LIBRPA)
   set(LIBRPA_ENABLE_FORTRAN_BIND "${TAESC_ENABLE_FORTRAN_BIND}")
   set(LIBRPA_ENABLE_TEST "${TAESC_ENABLE_TEST}")
   set(LIBRPA_FORTRAN_DP "${TAESC_FORTRAN_DP}")
-  set(LIBCOMM_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/LibComm/include")
-  set(LIBRI_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/LibRI/include")
-  set(CEREAL_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/thirdparty/cereal-d81e2f7/include")
-  # Keep downloaded third-party archives outside the build directory and the
-  # LibRPA checkout, so that they survive both being recreated.
+  # TAESC owns LibRI, LibComm and cereal. Supply them as parent targets, so
+  # that LibRPA compiles against these trees in place: no copy, no patch overlay.
+  # LibRPA then selects MPI_THREAD_MULTIPLE automatically when
+  # LIBRPA_MPI_THREAD_LEVEL is empty. Set it explicitly in HPC build scripts.
+  function(taesc_header_target name dir)
+    if(NOT EXISTS "${dir}")
+      message(FATAL_ERROR "${name}: ${dir} not found. Run `git submodule update --init --recursive`.")
+    endif()
+    if(NOT TARGET ${name})
+      add_library(${name} INTERFACE IMPORTED)
+      set_target_properties(${name} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${dir}")
+    endif()
+  endfunction()
+  taesc_header_target(LibRI::LibRI "${CMAKE_CURRENT_SOURCE_DIR}/LibRI/include")
+  taesc_header_target(LibComm::LibComm "${CMAKE_CURRENT_SOURCE_DIR}/LibComm/include")
+  taesc_header_target(cereal::cereal "${CMAKE_SOURCE_DIR}/thirdparty/cereal-d81e2f7/include")
+
+  # LibDDLA is only built for GPU backends. Use the submodule unless the user
+  # supplies a prebuilt installation (LIBDDLA_PATH).
+  if((LIBRPA_USE_HIP OR LIBRPA_USE_CUDA) AND NOT LIBDDLA_PATH)
+    if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/LibDDLA/include/ddla/ddla.h")
+      message(FATAL_ERROR "LibDDLA submodule is empty. Run `git submodule update --init src/LibDDLA`.")
+    endif()
+    set(LIBDDLA_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/LibDDLA" CACHE PATH "LibDDLA source tree")
+  endif()
+
+  # greenX and ELPA archives are committed in thirdparty/archives (Git LFS).
+  # Downloads are off by default, so that a missing archive fails at once.
   set(LIBRPA_THIRDPARTY_ARCHIVE_DIR "${CMAKE_SOURCE_DIR}/thirdparty/archives"
       CACHE PATH "Directory of LibRPA third-party source archives")
+  set(LIBRPA_THIRDPARTY_DOWNLOAD OFF CACHE BOOL "Download missing third-party archives")
+  file(GLOB _taesc_archives "${LIBRPA_THIRDPARTY_ARCHIVE_DIR}/*.tar.gz")
+  foreach(_archive IN LISTS _taesc_archives)
+    file(READ "${_archive}" _head LIMIT 32)
+    if(_head MATCHES "^version https://git-lfs")
+      message(FATAL_ERROR "${_archive} is a Git LFS pointer. Run `git lfs pull`.")
+    endif()
+  endforeach()
   add_subdirectory(LibRPA)
 
   target_include_directories(taesc
