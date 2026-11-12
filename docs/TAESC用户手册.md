@@ -120,6 +120,8 @@ TAESC 顶层 CMake 提供以下常用选项：
 | `TAESC_ENABLE_TEST` | `OFF` | 构建测试。开发或验证时可打开。 |
 | `TAESC_ENABLE_FORTRAN_BIND` | `ON` | 构建 Fortran 2003 绑定。 |
 | `TAESC_FORTRAN_DP` | `c_double` | Fortran 绑定中双精度 kind 设置。 |
+| `TAESC_THIRDPARTY_DOWNLOAD` | `ON` | 配置时是否下载缺失的 greenX 和 ELPA 源码归档。离线构建设为 `OFF`。该选项会覆盖 `LIBRPA_THIRDPARTY_DOWNLOAD`。 |
+| `TAESC_THIRDPARTY_ARCHIVE_DIR` | `thirdparty/archives` | 第三方源码归档缓存目录（不纳入 Git）。该选项会覆盖 `LIBRPA_THIRDPARTY_ARCHIVE_DIR`。 |
 | `BUILD_SHARED_LIBS` | CMake 默认 | 控制生成静态库或动态库。 |
 | `CMAKE_INSTALL_PREFIX` | 系统默认 | 安装前缀。 |
 
@@ -148,7 +150,7 @@ cmake --build build -j 4
 
 #### 第三方依赖与离线构建
 
-greenX 和 ELPA 在首次配置时由 LibRPA 下载，并缓存在 `thirdparty/archives/`，之后重建构建目录无需重新下载。计算节点通常无法访问外网，请先在可联网的机器上运行 `scripts/prepare_thirdparty.sh`（HIP/CUDA 构建仍使用 `src/LibDDLA`，无需下载），把 `thirdparty/archives/` 复制到构建机器，再加入 `-DLIBRPA_THIRDPARTY_DOWNLOAD=OFF` 配置。归档缺失时会在配置阶段立即报错，而不会在计算节点上卡住。
+greenX 和 ELPA 在首次配置时由 LibRPA 下载，并缓存在 `thirdparty/archives/`，之后重建构建目录无需重新下载。计算节点通常无法访问外网，请先在可联网的机器上运行 `scripts/prepare_thirdparty.sh`（HIP/CUDA 构建仍使用 `src/LibDDLA`，无需下载），把 `thirdparty/archives/` 复制到构建机器，再加入 `-DTAESC_THIRDPARTY_DOWNLOAD=OFF` 配置。归档缺失时会在配置阶段立即报错，而不会在计算节点上卡住。
 
 LibRI、LibComm 和 cereal 以 CMake 目标的形式提供给 LibRPA，此时 `LIBRPA_MPI_THREAD_LEVEL` 为空会自动选择 `MPI_THREAD_MULTIPLE`；在集群上建议显式设置该选项。
 

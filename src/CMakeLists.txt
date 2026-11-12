@@ -44,13 +44,14 @@ if(TAESC_ENABLE_LIBRPA)
   endif()
 
   # greenX and ELPA are managed by LibRPA: it downloads the pinned archives,
-  # checks their SHA-256, applies its patches and builds them. Keep the archive
-  # cache in thirdparty/archives (not tracked) so that it survives rebuilding
-  # the build directory. For offline builds, fill it with
+  # checks their SHA-256, applies its patches and builds them. The TAESC options
+  # are authoritative: normal variables override the cache entries that LibRPA
+  # creates, so changing them on a later configure takes effect. The archive
+  # cache is not tracked. For offline builds, fill it with
   # scripts/prepare_thirdparty.sh and configure with
-  # -DLIBRPA_THIRDPARTY_DOWNLOAD=OFF.
-  set(LIBRPA_THIRDPARTY_ARCHIVE_DIR "${CMAKE_SOURCE_DIR}/thirdparty/archives"
-      CACHE PATH "Directory of LibRPA third-party source archives")
+  # -DTAESC_THIRDPARTY_DOWNLOAD=OFF.
+  set(LIBRPA_THIRDPARTY_DOWNLOAD "${TAESC_THIRDPARTY_DOWNLOAD}")
+  set(LIBRPA_THIRDPARTY_ARCHIVE_DIR "${TAESC_THIRDPARTY_ARCHIVE_DIR}")
   add_subdirectory(LibRPA)
 
   target_include_directories(taesc
