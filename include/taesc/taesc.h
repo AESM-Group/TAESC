@@ -9,6 +9,7 @@
 #include "taesc_global.h"
 #include "taesc_input.h"
 #include "taesc_compute.h"
+#include "taesc_qsgw.h"
 
 #ifdef __cplusplus
 #include "taesc.hpp"

@@ -556,6 +556,20 @@ call MPI_Finalize(ierr)
 | EXX | `taesc_build_exx`、`taesc_get_exx_pot_kgrid`、`taesc_get_exx_pot_band_k` | k 网格或能带 k 点上的 EXX 势。 |
 | $G^0W^0$ | `taesc_build_g0w0_sigma`、`taesc_get_g0w0_sigc_*`、`taesc_get_g0w0_qpe_*`、`taesc_get_g0w0_spectral_function_*` | 相关自能、准粒子能量和谱函数。 |
 
+### 5.8 QSGW、Hartree AO 与平均场维度查询
+
+头文件 `taesc/taesc_qsgw.h`（已包含在 `taesc/taesc.h` 中）封装 LibRPA 的 QSGW 任务接口：
+
+| 功能 | C | C++ | Fortran |
+| --- | --- | --- | --- |
+| 平均场维度查询 | `taesc_get_meanfield_dimensions` | `Handler::get_meanfield_dimensions` | `h%get_meanfield_dimensions` |
+| 周期 Hartree AO 矩阵 | `taesc_compute_hartree_ao` | `Handler::compute_hartree_ao` | `h%compute_hartree_ao` |
+| QSGW 任务 | `taesc_create_qsgw_task` 等 | `taesc::QsgwTask` | `TaescQsgwTask`（仅支持 Vxc 输入） |
+
+约定与 LibRPA 一致：能量单位为 Hartree，C/C++ 下标从 0 开始，Fortran 下标从 1 开始。`TaescQsgwControls` 的 `state_low`/`state_high` 在 C 中为半开区间 `[low, high)`，在 Fortran 中为一基闭区间。使用 `taesc_init_qsgw_controls`（Fortran 为 `controls%init()`）获取默认值。
+
+QSGW 任务的调用顺序为：创建，`prepare`，`set_input`，`run`，删除。数值输入只在 handler 的 0 号进程上提供。原生速度算符、Hartree 库仑度规和输出回调（`set_output_sink`）仅在 C 和 C++ 接口中可用。Hartree AO 的前提条件见 LibRPA 文档：完整的 Gamma 中心全 BZ k 网格、匹配的 bare $q=0$ 度规，以及 `LIBRPA_ROUTING_LIBRI` 路由。
+
 ## 6. 典型操作流程
 
 ### 6.1 命令行基本流程

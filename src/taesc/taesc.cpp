@@ -709,4 +709,75 @@ Handler::get_g0w0_spectral_function_with_sigc_band_k(
     return {std::move(sigc), std::move(spectral_function)};
 }
 
+MeanfieldDimensions Handler::get_meanfield_dimensions(bool band_path) const
+{
+    MeanfieldDimensions d;
+    taesc_get_meanfield_dimensions(h_, band_path ? 1 : 0, &d.n_spins,
+                                   &d.n_kpts, &d.n_states, &d.n_aos,
+                                   &d.n_spinor);
+    return d;
+}
+
+std::vector<std::complex<double>> Handler::compute_hartree_ao(
+    const Options &opts, const std::vector<int> &iks, int n_aos)
+{
+    const std::size_t n = iks.size() * static_cast<std::size_t>(n_aos) * n_aos;
+    std::vector<double> re(n), im(n);
+    taesc_compute_hartree_ao(h_, opts.get_c_options(),
+                             static_cast<int>(iks.size()), iks.data(), n_aos,
+                             re.data(), im.data());
+    std::vector<std::complex<double>> out(n);
+    for (std::size_t i = 0; i < n; i++) out[i] = {re[i], im[i]};
+    return out;
+}
+
+namespace
+{
+int qsgw_sink_bridge(const TaescQsgwOutput *out, void *user_data)
+{
+    return (*static_cast<QsgwOutputSink *>(user_data))(*out);
+}
+}  // namespace
+
+TaescQsgwControls QsgwTask::default_controls()
+{
+    TaescQsgwControls c;
+    taesc_init_qsgw_controls(&c);
+    return c;
+}
+
+QsgwTask::QsgwTask(Handler &h, const Options &opts,
+                   const TaescQsgwControls *controls)
+    : task_(taesc_create_qsgw_task(h.get_c_handler(), opts.get_c_options(),
+                                   controls))
+{
+}
+
+QsgwTask::~QsgwTask()
+{
+    taesc_delete_qsgw_task(task_);
+}
+
+void QsgwTask::prepare()
+{
+    taesc_prepare_qsgw_task(task_);
+}
+
+void QsgwTask::set_input(const TaescQsgwInput *input)
+{
+    taesc_set_qsgw_input(task_, input);
+}
+
+void QsgwTask::set_output_sink(QsgwOutputSink sink)
+{
+    sink_ = std::move(sink);
+    taesc_set_qsgw_output_sink(task_, sink_ ? qsgw_sink_bridge : nullptr,
+                               &sink_);
+}
+
+void QsgwTask::run()
+{
+    taesc_run_qsgw_task(task_);
+}
+
 }  // namespace taesc

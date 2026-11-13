@@ -7,9 +7,11 @@
 #include "taesc_options.h"
 #include "taesc_handler.h"
 #include "taesc_enums.h"
+#include "taesc_qsgw.h"
 
 #include <complex>
 #include <cstddef>
+#include <functional>
 #include <vector>
 
 namespace taesc
@@ -25,6 +27,11 @@ struct G0W0SpectralFunctionResult
 {
     std::vector<std::complex<double>> sigc;
     std::vector<double> spectral_function;
+};
+
+struct MeanfieldDimensions
+{
+    int n_spins = 0, n_kpts = 0, n_states = 0, n_aos = 0, n_spinor = 0;
 };
 
 class Options
@@ -233,6 +240,40 @@ public:
         int i_state_high, const std::vector<double> &omegas,
         const std::vector<double> &vxc_band,
         const std::vector<double> &vexx_band);
+
+    /** Mean-field dimensions. band_path selects the band input. */
+    MeanfieldDimensions get_meanfield_dimensions(bool band_path = false) const;
+    /** Periodic Hartree AO matrices in Hartree, layout
+     *  [requested k][AO row][AO column] (row-major), zero-based k indices. */
+    std::vector<std::complex<double>> compute_hartree_ao(
+        const Options &opts, const std::vector<int> &iks, int n_aos);
 };
+
+/** Receives QSGW outputs on rank zero. Return zero on success. */
+using QsgwOutputSink = std::function<int(const TaescQsgwOutput &)>;
+
+/** RAII wrapper of a QSGW task. The handler must outlive the task. */
+class QsgwTask
+{
+private:
+    TaescQsgwTask *task_ = nullptr;
+    QsgwOutputSink sink_;
+
+public:
+    QsgwTask(Handler &h, const Options &opts,
+             const TaescQsgwControls *controls = nullptr);
+    QsgwTask(const QsgwTask &) = delete;
+    QsgwTask &operator=(const QsgwTask &) = delete;
+    ~QsgwTask();
+
+    static TaescQsgwControls default_controls();
+
+    void prepare();
+    /** Collective. input is only read on handler rank zero. */
+    void set_input(const TaescQsgwInput *input);
+    void set_output_sink(QsgwOutputSink sink);
+    void run();
+};
+
 
 }  // namespace taesc

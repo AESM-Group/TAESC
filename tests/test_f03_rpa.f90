@@ -46,6 +46,21 @@ program test_f03_rpa
    call h%init(MPI_COMM_WORLD)
 
    call h%set_scf_dimension(nspins, nkpts, nstates, nbasis)
+   block
+      integer :: md_ns, md_nk, md_nst, md_nao, md_nsp
+      type(TaescQsgwControls) :: qctl
+      call h%get_meanfield_dimensions(md_ns, md_nk, md_nst, md_nao, md_nsp)
+      if (md_ns /= nspins .or. md_nk /= nkpts .or. md_nst /= nstates .or. &
+          md_nao /= nbasis .or. md_nsp /= 1) then
+         write(*,*) "get_meanfield_dimensions mismatch", md_ns, md_nk, md_nst, md_nao, md_nsp
+         nfail = nfail + 1
+      end if
+      call qctl%init()
+      if (qctl%max_iterations /= 10 .or. qctl%state_low /= 1 .or. .not. qctl%update_hartree) then
+         write(*,*) "unexpected QSGW control defaults"
+         nfail = nfail + 1
+      end if
+   end block
    allocate(wg(nstates, nkpts, nspins), ekb(nstates, nkpts, nspins))
    wg(:, :, :) = 0.0_dp
    wg(1, :, :) = 2.0_dp
