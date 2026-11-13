@@ -2,6 +2,8 @@
 
 #include "librpa_global.h"
 
+#include "../version.h"
+
 
 const char* taesc_get_build_info(void)
 {
@@ -10,17 +12,17 @@ const char* taesc_get_build_info(void)
 
 int taesc_get_major_version(void)
 {
-    return librpa_get_major_version();
+    return TAESC_MAJOR_VERSION;
 }
 
 int taesc_get_minor_version(void)
 {
-    return librpa_get_minor_version();
+    return TAESC_MINOR_VERSION;
 }
 
 int taesc_get_patch_version(void)
 {
-    return librpa_get_patch_version();
+    return TAESC_PATCH_VERSION;
 }
 
 void taesc_init_global(TaescSwitch switch_redirect_stdout,
