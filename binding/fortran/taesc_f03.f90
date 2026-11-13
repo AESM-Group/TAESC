@@ -8,6 +8,8 @@ module taesc_f03
 
    public :: TaescOptions
    public :: TaescHandler
+   public :: TaescQsgwControls
+   public :: TaescQsgwTask
    public :: taesc_init_global
    public :: taesc_finalize_global
    public :: taesc_set_output_level
@@ -108,8 +110,71 @@ module taesc_f03
       procedure, public :: build_g0w0_sigma => taesc_build_g0w0_sigma
       procedure, public :: get_g0w0_sigc_kgrid
       procedure, public :: get_g0w0_sigc_band_k
+      procedure, public :: get_meanfield_dimensions => taesc_get_meanfield_dimensions
+      procedure, public :: compute_hartree_ao => taesc_compute_hartree_ao
       final :: taesc_handler_finalize
    end type TaescHandler
+
+   !> QSGW runtime controls. Energies in Hartree unless a name says eV.
+   !> init sets the defaults of the underlying LibRPA. Empty strings select
+   !> the LibRPA default. State indices are one-based in this interface.
+   type, public :: TaescQsgwControls
+      integer :: min_iterations = 1, max_iterations = 10
+      integer :: unoccupied_keep = 10, cut_mode = 0
+      real(dp) :: mixing_beta = 0.2_dp, cut_shift_ha = 0.0_dp
+      real(dp) :: convergence_tolerance_ev = 1.0e-4_dp
+      character(len=TAESC_MAX_STRLEN) :: mixer = "", velocity_mode = ""
+      character(len=TAESC_MAX_STRLEN) :: restart_file = "", checkpoint_file = ""
+      logical :: output_matrices = .false., output_qp = .true.
+      logical :: export_hamiltonian = .true.
+      integer :: state_low = 1, state_high = 2147483647
+      logical :: interband_velocity = .false., expand_ibz = .false.
+      logical :: update_hartree = .true.
+   contains
+      procedure, public :: init => taesc_qsgw_controls_init
+   end type TaescQsgwControls
+
+   !> QSGW task. Only Vxc in the SCF-eigenstate basis (column-major
+   !> matrices) is supported as host input. Native velocities, the Hartree
+   !> metric and output sinks need the C or C++ interface.
+   type, public :: TaescQsgwTask
+      private
+      type(c_ptr) :: ptr_c_task = c_null_ptr
+   contains
+      procedure, public :: init => taesc_qsgw_task_init
+      procedure, public :: free => taesc_qsgw_task_free
+      procedure, public :: prepare => taesc_qsgw_task_prepare
+      procedure, public :: set_input_vxc => taesc_qsgw_task_set_input_vxc
+      procedure, public :: run => taesc_qsgw_task_run
+      final :: taesc_qsgw_task_finalize
+   end type TaescQsgwTask
+
+   type, bind(c) :: taesc_qsgw_controls_c
+      integer(c_int) :: min_iterations, max_iterations, unoccupied_keep, cut_mode
+      real(c_double) :: mixing_beta, cut_shift_ha, convergence_tolerance_ev
+      type(c_ptr) :: mixer, velocity_mode, restart_file, checkpoint_file
+      integer(c_int) :: output_matrices, output_qp, export_hamiltonian
+      integer(c_int) :: state_low, state_high, interband_velocity
+      integer(c_int) :: expand_ibz, update_hartree
+   end type taesc_qsgw_controls_c
+
+   type, bind(c) :: taesc_qsgw_matrix_c
+      integer(c_int) :: spin, kpoint, dimension, row_major
+      type(c_ptr) :: values_ri
+   end type taesc_qsgw_matrix_c
+
+   !> Layout of TaescQsgwInput with the members that this binding sets.
+   type, bind(c) :: taesc_qsgw_input_c
+      integer(c_int) :: n_vxc, n_vxc_band
+      type(c_ptr) :: vxc, vxc_band
+      integer(c_int) :: vxc_in_ao_basis
+      type(c_ptr) :: native_operators
+      real(c_double) :: inplane_area_bohr2, auxiliary_monopole_norm_squared
+      integer(c_int) :: hartree_n_aux
+      type(c_ptr) :: hartree_coulomb_q0_ri
+      integer(c_int) :: n_hartree_lri_blocks
+      type(c_ptr) :: hartree_lri_blocks
+   end type taesc_qsgw_input_c
 
    interface
       function taesc_create_options_c() bind(c, name="taesc_create_options")
@@ -433,6 +498,57 @@ module taesc_f03
          real(c_double), dimension(*), intent(in) :: vxc, vexx
          real(c_double), dimension(*), intent(inout) :: sigc_re, sigc_im
       end subroutine taesc_get_g0w0_sigc_band_k_c
+
+      subroutine taesc_get_meanfield_dimensions_c(h, band_path, nspins, nkpts, &
+            nstates, naos, nspinor) bind(c, name="taesc_get_meanfield_dimensions")
+         import :: c_int, c_ptr
+         type(c_ptr), value :: h
+         integer(c_int), value :: band_path
+         integer(c_int), intent(out) :: nspins, nkpts, nstates, naos, nspinor
+      end subroutine taesc_get_meanfield_dimensions_c
+
+      subroutine taesc_compute_hartree_ao_c(h, opts, n_kpoints, kpoints, n_aos, &
+            values_re, values_im) bind(c, name="taesc_compute_hartree_ao")
+         import :: c_double, c_int, c_ptr
+         type(c_ptr), value :: h, opts
+         integer(c_int), value :: n_kpoints, n_aos
+         integer(c_int), dimension(*), intent(in) :: kpoints
+         real(c_double), dimension(*), intent(inout) :: values_re, values_im
+      end subroutine taesc_compute_hartree_ao_c
+
+      subroutine taesc_init_qsgw_controls_c(controls) &
+            bind(c, name="taesc_init_qsgw_controls")
+         import :: taesc_qsgw_controls_c
+         type(taesc_qsgw_controls_c), intent(out) :: controls
+      end subroutine taesc_init_qsgw_controls_c
+
+      function taesc_create_qsgw_task_c(h, opts, controls) &
+            bind(c, name="taesc_create_qsgw_task")
+         import :: c_ptr, taesc_qsgw_controls_c
+         type(c_ptr), value :: h, opts
+         type(taesc_qsgw_controls_c), intent(in) :: controls
+         type(c_ptr) :: taesc_create_qsgw_task_c
+      end function taesc_create_qsgw_task_c
+
+      subroutine taesc_prepare_qsgw_task_c(task) bind(c, name="taesc_prepare_qsgw_task")
+         import :: c_ptr
+         type(c_ptr), value :: task
+      end subroutine taesc_prepare_qsgw_task_c
+
+      subroutine taesc_set_qsgw_input_c(task, input) bind(c, name="taesc_set_qsgw_input")
+         import :: c_ptr
+         type(c_ptr), value :: task, input
+      end subroutine taesc_set_qsgw_input_c
+
+      subroutine taesc_run_qsgw_task_c(task) bind(c, name="taesc_run_qsgw_task")
+         import :: c_ptr
+         type(c_ptr), value :: task
+      end subroutine taesc_run_qsgw_task_c
+
+      subroutine taesc_delete_qsgw_task_c(task) bind(c, name="taesc_delete_qsgw_task")
+         import :: c_ptr
+         type(c_ptr), value :: task
+      end subroutine taesc_delete_qsgw_task_c
    end interface
 
 contains
@@ -1288,5 +1404,211 @@ contains
          error stop trim(routine) // ": result array has wrong shape"
       end if
    end subroutine require_result_shape
+
+   subroutine taesc_get_meanfield_dimensions(this, nspins, nkpts, nstates, naos, &
+         nspinor, band_path)
+      class(TaescHandler), intent(in) :: this
+      integer, intent(out) :: nspins, nkpts, nstates, naos, nspinor
+      logical, intent(in), optional :: band_path
+      integer(c_int) :: ns, nk, nst, nao, nsp, bp
+
+      call require_handler(this, "get_meanfield_dimensions")
+      bp = 0_c_int
+      if (present(band_path)) then
+         if (band_path) bp = 1_c_int
+      end if
+      call taesc_get_meanfield_dimensions_c(this%ptr_c_handle, bp, ns, nk, nst, nao, nsp)
+      nspins = int(ns); nkpts = int(nk); nstates = int(nst)
+      naos = int(nao); nspinor = int(nsp)
+   end subroutine taesc_get_meanfield_dimensions
+
+   !> Physical spin-summed periodic Hartree AO operator, in Hartree.
+   !> Collective. iks are one-based indices of the full SCF k grid. The host
+   !> must supply a matched bare q=0 metric (see the LibRPA documentation).
+   subroutine taesc_compute_hartree_ao(this, opts, iks, nao, vh)
+      class(TaescHandler), intent(inout) :: this
+      class(TaescOptions), intent(inout) :: opts
+      integer, intent(in) :: iks(:), nao
+      complex(dp), intent(out) :: vh(nao, nao, size(iks))
+      integer(c_int), allocatable :: iks_c(:)
+      real(c_double), allocatable :: re(:), im(:)
+      integer :: k, i, j, idx
+
+      call require_handler(this, "compute_hartree_ao")
+      call ensure_options(opts)
+      allocate(iks_c(max(1, size(iks))), re(max(1, size(iks) * nao * nao)), &
+         im(max(1, size(iks) * nao * nao)))
+      if (size(iks) > 0) iks_c(1:size(iks)) = int(iks - 1, c_int)
+      call taesc_compute_hartree_ao_c(this%ptr_c_handle, opts%ptr_c_options, &
+         int(size(iks), c_int), iks_c, int(nao, c_int), re, im)
+      do k = 1, size(iks)
+         do i = 1, nao
+            do j = 1, nao
+               idx = ((k - 1) * nao + i - 1) * nao + j
+               vh(i, j, k) = cmplx(re(idx), im(idx), kind=dp)
+            end do
+         end do
+      end do
+      deallocate(iks_c, re, im)
+   end subroutine taesc_compute_hartree_ao
+
+   subroutine taesc_qsgw_controls_init(this)
+      class(TaescQsgwControls), intent(out) :: this
+      type(taesc_qsgw_controls_c) :: c
+
+      call taesc_init_qsgw_controls_c(c)
+      this%min_iterations = int(c%min_iterations)
+      this%max_iterations = int(c%max_iterations)
+      this%unoccupied_keep = int(c%unoccupied_keep)
+      this%cut_mode = int(c%cut_mode)
+      this%mixing_beta = real(c%mixing_beta, dp)
+      this%cut_shift_ha = real(c%cut_shift_ha, dp)
+      this%convergence_tolerance_ev = real(c%convergence_tolerance_ev, dp)
+      this%output_matrices = c%output_matrices /= 0
+      this%output_qp = c%output_qp /= 0
+      this%export_hamiltonian = c%export_hamiltonian /= 0
+      this%state_low = int(c%state_low) + 1
+      this%state_high = int(c%state_high)
+      this%interband_velocity = c%interband_velocity /= 0
+      this%expand_ibz = c%expand_ibz /= 0
+      this%update_hartree = c%update_hartree /= 0
+   end subroutine taesc_qsgw_controls_init
+
+   subroutine taesc_qsgw_task_init(this, h, opts, controls)
+      class(TaescQsgwTask), intent(inout) :: this
+      class(TaescHandler), intent(inout) :: h
+      class(TaescOptions), intent(inout) :: opts
+      type(TaescQsgwControls), intent(in), optional :: controls
+      type(TaescQsgwControls) :: ctl
+      type(taesc_qsgw_controls_c) :: c
+      character(kind=c_char), allocatable, target :: mixer(:), velocity(:), restart(:), ckpt(:)
+
+      call require_handler(h, "TaescQsgwTask%init")
+      call ensure_options(opts)
+      if (c_associated(this%ptr_c_task)) call this%free()
+      call taesc_init_qsgw_controls_c(c)
+      if (present(controls)) then
+         ctl = controls
+         c%min_iterations = int(ctl%min_iterations, c_int)
+         c%max_iterations = int(ctl%max_iterations, c_int)
+         c%unoccupied_keep = int(ctl%unoccupied_keep, c_int)
+         c%cut_mode = int(ctl%cut_mode, c_int)
+         c%mixing_beta = real(ctl%mixing_beta, c_double)
+         c%cut_shift_ha = real(ctl%cut_shift_ha, c_double)
+         c%convergence_tolerance_ev = real(ctl%convergence_tolerance_ev, c_double)
+         c%output_matrices = merge(1_c_int, 0_c_int, ctl%output_matrices)
+         c%output_qp = merge(1_c_int, 0_c_int, ctl%output_qp)
+         c%export_hamiltonian = merge(1_c_int, 0_c_int, ctl%export_hamiltonian)
+         c%state_low = int(ctl%state_low - 1, c_int)
+         c%state_high = int(ctl%state_high, c_int)
+         c%interband_velocity = merge(1_c_int, 0_c_int, ctl%interband_velocity)
+         c%expand_ibz = merge(1_c_int, 0_c_int, ctl%expand_ibz)
+         c%update_hartree = merge(1_c_int, 0_c_int, ctl%update_hartree)
+         if (len_trim(ctl%mixer) > 0) then
+            mixer = to_c_string(ctl%mixer)
+            c%mixer = c_loc(mixer)
+         end if
+         if (len_trim(ctl%velocity_mode) > 0) then
+            velocity = to_c_string(ctl%velocity_mode)
+            c%velocity_mode = c_loc(velocity)
+         end if
+         if (len_trim(ctl%restart_file) > 0) then
+            restart = to_c_string(ctl%restart_file)
+            c%restart_file = c_loc(restart)
+         end if
+         if (len_trim(ctl%checkpoint_file) > 0) then
+            ckpt = to_c_string(ctl%checkpoint_file)
+            c%checkpoint_file = c_loc(ckpt)
+         end if
+      end if
+      this%ptr_c_task = taesc_create_qsgw_task_c(h%ptr_c_handle, opts%ptr_c_options, c)
+   end subroutine taesc_qsgw_task_init
+
+   subroutine require_qsgw_task(this, routine)
+      class(TaescQsgwTask), intent(in) :: this
+      character(len=*), intent(in) :: routine
+
+      if (.not. c_associated(this%ptr_c_task)) then
+         error stop trim(routine) // ": TaescQsgwTask is not initialized"
+      end if
+   end subroutine require_qsgw_task
+
+   subroutine taesc_qsgw_task_prepare(this)
+      class(TaescQsgwTask), intent(inout) :: this
+
+      call require_qsgw_task(this, "TaescQsgwTask%prepare")
+      call taesc_prepare_qsgw_task_c(this%ptr_c_task)
+   end subroutine taesc_qsgw_task_prepare
+
+   !> Collective. vxc(dim, dim, nkpts, nspins) is read on handler rank zero
+   !> only: other ranks omit it. Column-major, Hartree, SCF-eigenstate basis.
+   subroutine taesc_qsgw_task_set_input_vxc(this, vxc)
+      class(TaescQsgwTask), intent(inout) :: this
+      complex(dp), intent(in), target, optional :: vxc(:, :, :, :)
+      type(taesc_qsgw_matrix_c), allocatable, target :: mats(:)
+      real(c_double), allocatable, target :: buf(:, :, :, :, :)
+      type(taesc_qsgw_input_c), target :: input
+      integer :: dim, nk, ns, ik, is, n
+
+      call require_qsgw_task(this, "TaescQsgwTask%set_input_vxc")
+      if (.not. present(vxc)) then
+         call taesc_set_qsgw_input_c(this%ptr_c_task, c_null_ptr)
+         return
+      end if
+      dim = size(vxc, 1)
+      nk = size(vxc, 3)
+      ns = size(vxc, 4)
+      if (size(vxc, 2) /= dim) error stop "set_input_vxc: matrices must be square"
+      allocate(buf(2, dim, dim, nk, ns), mats(nk * ns))
+      buf(1, :, :, :, :) = real(vxc, c_double)
+      buf(2, :, :, :, :) = aimag(vxc)
+      n = 0
+      do is = 1, ns
+         do ik = 1, nk
+            n = n + 1
+            mats(n)%spin = int(is - 1, c_int)
+            mats(n)%kpoint = int(ik - 1, c_int)
+            mats(n)%dimension = int(dim, c_int)
+            mats(n)%row_major = 0_c_int
+            mats(n)%values_ri = c_loc(buf(1, 1, 1, ik, is))
+         end do
+      end do
+      input%n_vxc = int(nk * ns, c_int)
+      input%n_vxc_band = 0_c_int
+      input%vxc = c_loc(mats(1))
+      input%vxc_band = c_null_ptr
+      input%vxc_in_ao_basis = 0_c_int
+      input%native_operators = c_null_ptr
+      input%inplane_area_bohr2 = 0.0_c_double
+      input%auxiliary_monopole_norm_squared = 0.0_c_double
+      input%hartree_n_aux = 0_c_int
+      input%hartree_coulomb_q0_ri = c_null_ptr
+      input%n_hartree_lri_blocks = 0_c_int
+      input%hartree_lri_blocks = c_null_ptr
+      call taesc_set_qsgw_input_c(this%ptr_c_task, c_loc(input))
+      deallocate(buf, mats)
+   end subroutine taesc_qsgw_task_set_input_vxc
+
+   subroutine taesc_qsgw_task_run(this)
+      class(TaescQsgwTask), intent(inout) :: this
+
+      call require_qsgw_task(this, "TaescQsgwTask%run")
+      call taesc_run_qsgw_task_c(this%ptr_c_task)
+   end subroutine taesc_qsgw_task_run
+
+   subroutine taesc_qsgw_task_free(this)
+      class(TaescQsgwTask), intent(inout) :: this
+
+      if (c_associated(this%ptr_c_task)) then
+         call taesc_delete_qsgw_task_c(this%ptr_c_task)
+         this%ptr_c_task = c_null_ptr
+      end if
+   end subroutine taesc_qsgw_task_free
+
+   subroutine taesc_qsgw_task_finalize(this)
+      type(TaescQsgwTask), intent(inout) :: this
+
+      call this%free()
+   end subroutine taesc_qsgw_task_finalize
 
 end module taesc_f03

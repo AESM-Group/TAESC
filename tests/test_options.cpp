@@ -23,6 +23,13 @@ int main()
     opts.set("output_exx_mat_k", "true");
     opts.set("output_exx_mat_r", "on");
 
+    {
+        const TaescQsgwControls c = taesc::QsgwTask::default_controls();
+        if (c.max_iterations != 10 || c.min_iterations != 1 ||
+            c.update_hartree != 1 || c.state_low != 0 || c.mixer == nullptr)
+            return 3;
+    }
+
     if (taesc::get_output_level() != TAESC_VERBOSE_WARN) return 2;
 
     try {

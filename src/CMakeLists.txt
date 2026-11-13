@@ -7,6 +7,7 @@ add_library(taesc
   taesc/input.cpp
   taesc/options_bridge.cpp
   taesc/options.cpp
+  taesc/qsgw.cpp
 )
 
 if(TAESC_ENABLE_LIBRPA)
