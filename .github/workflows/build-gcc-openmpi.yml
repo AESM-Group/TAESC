@@ -1,0 +1,104 @@
+name: Build with GCC and OpenMPI
+
+# Build only. Tests are not run yet.
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Cancel a pull request run when a new commit arrives. On master, a run that
+# started does not stop.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  LINUX_GCC_COMPONENTS: gfortran_cmake_pkg-config_openmpi-bin_libopenmpi-dev_libopenblas-dev_libscalapack-openmpi-dev
+
+jobs:
+  build:
+    name: GCC + OpenMPI + ScaLAPACK
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Fetch submodules
+        run: git submodule update --init --depth 1 src/LibRPA src/LibRI src/LibComm
+      - name: Collect apt dependencies
+        run: |
+          sudo apt-get update
+          echo "$LINUX_GCC_COMPONENTS" | sed "s/_/ /g" | xargs -n 1 apt-cache depends | tee depends.txt
+      - name: Cache apt packages
+        uses: actions/cache@v4
+        with:
+          path: ~/apt-cache
+          key: gcc-apt-${{ runner.os }}-${{ env.LINUX_GCC_COMPONENTS }}-${{ hashFiles('**/depends.txt') }}
+      - name: Install tools
+        run: |
+          mkdir -p "$HOME/apt-cache/partial"
+          sudo apt-get install -y --no-install-recommends \
+            -o Dir::Cache::Archives="$HOME/apt-cache" \
+            $(echo "$LINUX_GCC_COMPONENTS" | sed "s/_/ /g")
+          # Let the cache step save the files that apt wrote as root
+          sudo chown -R "$USER" "$HOME/apt-cache"
+      - name: Check environment
+        run: |
+          gcc --version | head -n 1
+          mpicc --showme:version || true
+          ls /usr/lib/x86_64-linux-gnu | grep -i scalapack
+      - name: Cache third-party archives
+        uses: actions/cache@v4
+        with:
+          path: thirdparty/archives
+          key: thirdparty-${{ hashFiles('cmake/TAESCCereal.cmake', 'src/LibRPA/thirdparty/manifest.cmake') }}
+      - name: Configure
+        run: |
+          CC=mpicc CXX=mpicxx FC=mpifort cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_SHARED_LIBS=ON \
+            -DTAESC_ENABLE_LIBRPA=ON \
+            -DTAESC_ENABLE_FORTRAN_BIND=ON \
+            -DTAESC_ENABLE_TEST=OFF \
+            -DENABLE_GREENX_CTEST=OFF \
+            -DLIBRPA_USE_LIBRI=ON \
+            -DLIBRPA_USE_ELPA=OFF \
+            -DLIBRPA_MPI_THREAD_LEVEL=MPI_THREAD_FUNNELED \
+            -DLIBRPA_VERBOSE_OUTPUT=OFF \
+            -DBLA_VENDOR=OpenBLAS \
+            -DCMAKE_Fortran_FLAGS="-ffree-line-length-none -fallow-argument-mismatch" \
+            -DCMAKE_INSTALL_PREFIX="$RUNNER_TEMP/install"
+      - name: Build
+        run: cmake --build build -j "$(nproc)"
+      - name: Install
+        run: cmake --install build
+      - name: Check installed files
+        run: |
+          prefix="$RUNNER_TEMP/install"
+          status=0
+          for lib in libtaesc.so libtaesc_f03.so; do
+            [[ -n "$(find "$prefix" -name "$lib" -print -quit)" ]] || { echo "::error::Missing $lib"; status=1; }
+          done
+          for f in include/taesc/taesc.h include/taesc/taesc_f03.mod bin/taesc-driver; do
+            [[ -e "$prefix/$f" ]] || { echo "::error::Missing $f"; status=1; }
+          done
+          exit $status
+      - name: Save configure logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: configure-logs-gcc-openmpi
+          path: |
+            build/CMakeFiles/CMakeConfigureLog.yaml
+            build/CMakeFiles/CMakeOutput.log
+            build/CMakeFiles/CMakeError.log
+            build/CMakeCache.txt
+          if-no-files-found: ignore
