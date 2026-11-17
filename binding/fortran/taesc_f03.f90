@@ -6,10 +6,6 @@ module taesc_f03
 
    private
 
-   public :: TaescOptions
-   public :: TaescHandler
-   public :: TaescQsgwControls
-   public :: TaescQsgwTask
    public :: taesc_init_global
    public :: taesc_finalize_global
    public :: taesc_set_output_level
