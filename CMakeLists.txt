@@ -19,9 +19,9 @@ option(TAESC_ENABLE_LIBRPA          ""    ON)
 option(TAESC_ENABLE_TEST            ""    OFF)
 option(TAESC_ENABLE_FORTRAN_BIND    ""    ON)
 set(TAESC_FORTRAN_DP "c_double" CACHE STRING "Fortran kind used by LibRPA bindings")
-option(TAESC_THIRDPARTY_DOWNLOAD "Download missing third-party source archives (greenX, ELPA)" ON)
+option(TAESC_THIRDPARTY_DOWNLOAD "Download missing third-party source archives (cereal, greenX, ELPA)" ON)
 set(TAESC_THIRDPARTY_ARCHIVE_DIR "${CMAKE_SOURCE_DIR}/thirdparty/archives" CACHE PATH
-    "Directory of third-party source archives (greenX, ELPA)")
+    "Directory of third-party source archives (cereal, greenX, ELPA)")
 
 # C++ standard requirement
 set(CMAKE_CXX_STANDARD 17)

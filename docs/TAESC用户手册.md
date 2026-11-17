@@ -80,10 +80,10 @@ TAESC 面向中小规模本地测试和高性能计算集群运行。实际硬�
 
 - `src/LibRPA`：底层 RPA/GW 功能（子模块）。
 - `src/LibRI`、`src/LibComm` 和 `src/LibDDLA`：子模块。LibRPA 直接使用这些源码树，不会下载或打补丁；LibDDLA 仅在 HIP/CUDA 构建中使用。
-- `thirdparty/cereal-d81e2f7`：序列化依赖。
-- greenX 和 ELPA 由 LibRPA 管理：配置阶段下载固定版本的源码归档，校验 SHA-256，解压并打补丁。归档缓存在 `thirdparty/archives/`（不纳入 Git）。
+- cereal（序列化依赖）由 TAESC 在配置阶段下载固定版本（`d81e2f7`）的源码归档并校验 SHA-256，以 `cereal::cereal` 目标提供给 LibRPA；可用 `-DCEREAL_INCLUDE_DIR=<路径>` 指定已有安装。
+- greenX 和 ELPA 由 LibRPA 管理：配置阶段下载固定版本的源码归档，校验 SHA-256，解压并打补丁。归档与 cereal 一起缓存在 `thirdparty/archives/`（不纳入 Git）。
 
-请使用 `git clone --recursive` 获取源码。若子模块未初始化，CMake 配置会立即报错并给出对应命令。首次配置需要联网下载 greenX 和 ELPA；离线构建见 3.3 节。
+请使用 `git clone --recursive` 获取源码。若子模块未初始化，CMake 配置会立即报错并给出对应命令。首次配置需要联网下载 cereal、greenX 和 ELPA；离线构建见 3.3 节。
 
 ### 2.3 运行前检查
 
@@ -120,7 +120,7 @@ TAESC 顶层 CMake 提供以下常用选项：
 | `TAESC_ENABLE_TEST` | `OFF` | 构建测试。开发或验证时可打开。 |
 | `TAESC_ENABLE_FORTRAN_BIND` | `ON` | 构建 Fortran 2003 绑定。 |
 | `TAESC_FORTRAN_DP` | `c_double` | Fortran 绑定中双精度 kind 设置。 |
-| `TAESC_THIRDPARTY_DOWNLOAD` | `ON` | 配置时是否下载缺失的 greenX 和 ELPA 源码归档。离线构建设为 `OFF`。该选项会覆盖 `LIBRPA_THIRDPARTY_DOWNLOAD`。 |
+| `TAESC_THIRDPARTY_DOWNLOAD` | `ON` | 配置时是否下载缺失的 cereal、greenX 和 ELPA 源码归档。离线构建设为 `OFF`。该选项会覆盖 `LIBRPA_THIRDPARTY_DOWNLOAD`。 |
 | `TAESC_THIRDPARTY_ARCHIVE_DIR` | `thirdparty/archives` | 第三方源码归档缓存目录（不纳入 Git）。该选项会覆盖 `LIBRPA_THIRDPARTY_ARCHIVE_DIR`。 |
 | `BUILD_SHARED_LIBS` | CMake 默认 | 控制生成静态库或动态库。 |
 | `CMAKE_INSTALL_PREFIX` | 系统默认 | 安装前缀。 |
@@ -150,7 +150,7 @@ cmake --build build -j 4
 
 #### 第三方依赖与离线构建
 
-greenX 和 ELPA 在首次配置时由 LibRPA 下载，并缓存在 `thirdparty/archives/`，之后重建构建目录无需重新下载。计算节点通常无法访问外网，请先在可联网的机器上运行 `scripts/prepare_thirdparty.sh`（HIP/CUDA 构建仍使用 `src/LibDDLA`，无需下载），把 `thirdparty/archives/` 复制到构建机器，再加入 `-DTAESC_THIRDPARTY_DOWNLOAD=OFF` 配置。归档缺失时会在配置阶段立即报错，而不会在计算节点上卡住。
+cereal（由 TAESC 下载）、greenX 和 ELPA（由 LibRPA 下载）在首次配置时下载，并缓存在 `thirdparty/archives/`，之后重建构建目录无需重新下载。计算节点通常无法访问外网，请先在可联网的机器上运行 `scripts/prepare_thirdparty.sh`（HIP/CUDA 构建仍使用 `src/LibDDLA`，无需下载），把 `thirdparty/archives/` 复制到构建机器，再加入 `-DTAESC_THIRDPARTY_DOWNLOAD=OFF` 配置。归档缺失时会在配置阶段立即报错，而不会在计算节点上卡住。
 
 LibRI、LibComm 和 cereal 以 CMake 目标的形式提供给 LibRPA，此时 `LIBRPA_MPI_THREAD_LEVEL` 为空会自动选择 `MPI_THREAD_MULTIPLE`；在集群上建议显式设置该选项。
 
@@ -710,7 +710,7 @@ TAESC 当前是面向高级电子结构计算的顶层接口和驱动层，主�
 - `input_preset = abacus` 使用 reader-v1 文件名；旧版 ABACUS 导出请使用 `abacus-legacy`。
 - 若干修复可能改变数值：Padé 对零值或重复采样点的回退、滤波库仑的 head/wing、RPA 的分布式 log-det、`rtau` 多 q 的 `map::at` 失败、shrink-ABF 的全 BZ `W(R)`。
 - `LibrpaOptions` 的大小改变（ABI 变化），链接 `libtaesc` 的宿主程序需要重新编译。
-- CMake 最低版本升为 3.18；新增 `src/LibDDLA` 子模块；greenX 和 ELPA 由 LibRPA 下载并缓存在 `thirdparty/archives/`，第三方依赖和 ELPA 选项见 2.2 与 3.3 节。
+- CMake 最低版本升为 3.18；新增 `src/LibDDLA` 子模块；cereal、greenX 和 ELPA 在配置时下载并缓存在 `thirdparty/archives/`（不再内置 `thirdparty/cereal-d81e2f7`），第三方依赖和 ELPA 选项见 2.2 与 3.3 节。
 
 ### Q5：API 和命令行能混用吗？
 

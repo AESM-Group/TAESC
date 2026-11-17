@@ -99,8 +99,5 @@ dkms.conf
 
 # End of https://www.toptal.com/developers/gitignore/api/c,c++,fortran,cuda
 
-# LibRPA third-party source archives
-thirdparty/archives/
-
-# Cache of LibRPA third-party source archives (greenX, ELPA)
+# Cache of third-party source archives (cereal, greenX, ELPA)
 thirdparty/archives/

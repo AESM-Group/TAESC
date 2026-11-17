@@ -18,7 +18,8 @@ if(TAESC_ENABLE_LIBRPA)
   set(LIBRPA_ENABLE_FORTRAN_BIND "${TAESC_ENABLE_FORTRAN_BIND}")
   set(LIBRPA_ENABLE_TEST "${TAESC_ENABLE_TEST}")
   set(LIBRPA_FORTRAN_DP "${TAESC_FORTRAN_DP}")
-  # TAESC owns LibRI, LibComm and cereal. Supply them as parent targets, so
+  # TAESC owns LibRI, LibComm (submodules) and cereal (downloaded by
+  # cmake/TAESCCereal.cmake). Supply them as parent targets, so
   # that LibRPA compiles against these trees in place: no copy, no patch overlay.
   # LibRPA then selects MPI_THREAD_MULTIPLE automatically when
   # LIBRPA_MPI_THREAD_LEVEL is empty. Set it explicitly in HPC build scripts.
@@ -33,7 +34,7 @@ if(TAESC_ENABLE_LIBRPA)
   endfunction()
   taesc_header_target(LibRI::LibRI "${CMAKE_CURRENT_SOURCE_DIR}/LibRI/include")
   taesc_header_target(LibComm::LibComm "${CMAKE_CURRENT_SOURCE_DIR}/LibComm/include")
-  taesc_header_target(cereal::cereal "${CMAKE_SOURCE_DIR}/thirdparty/cereal-d81e2f7/include")
+  include("${CMAKE_SOURCE_DIR}/cmake/TAESCCereal.cmake")
 
   # LibDDLA is only built for GPU backends. Use the submodule unless the user
   # supplies a prebuilt installation (LIBDDLA_PATH).
@@ -45,7 +46,8 @@ if(TAESC_ENABLE_LIBRPA)
   endif()
 
   # greenX and ELPA are managed by LibRPA: it downloads the pinned archives,
-  # checks their SHA-256, applies its patches and builds them. The TAESC options
+  # checks their SHA-256, applies its patches and builds them. cereal uses the
+  # same archive cache, downloaded by cmake/TAESCCereal.cmake. The TAESC options
   # are authoritative: normal variables override the cache entries that LibRPA
   # creates, so changing them on a later configure takes effect. The archive
   # cache is not tracked. For offline builds, fill it with
