@@ -1,0 +1,108 @@
+name: Build with Intel oneAPI
+
+# Build only. Tests are not run yet.
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Cancel a pull request run when a new commit arrives. On master, a run that
+# started does not stop.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# oneapi install adapted from src/LibRPA/.github/workflows/ci-oneapi.yml
+env:
+  LINUX_CPP_COMPONENTS: intel-oneapi-dpcpp-cpp-compiler_intel-oneapi-compiler-fortran_intel-oneapi-mkl_intel-oneapi-mkl-devel_intel-oneapi-mpi_intel-oneapi-mpi-devel
+
+jobs:
+  build:
+    name: oneAPI
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Fetch submodules
+        run: git submodule update --init --depth 1 src/LibRPA src/LibRI src/LibComm
+      - name: Setup Intel oneAPI apt repo
+        run: |
+          wget -O- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB \
+            | gpg --dearmor | sudo tee /usr/share/keyrings/oneapi-archive-keyring.gpg > /dev/null
+          echo "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" \
+            | sudo tee /etc/apt/sources.list.d/oneAPI.list
+          sudo apt-get update --allow-unauthenticated -o Dir::Etc::sourcelist="sources.list.d/oneAPI.list" -o APT::Get::List-Cleanup="0"
+      - name: Collect apt dependencies
+        run: |
+          echo "$LINUX_CPP_COMPONENTS" | sed "s/_/ /g" | xargs -n 1 apt-cache depends | tee depends.txt
+      - name: Cache install
+        id: cache-install
+        uses: actions/cache@v4
+        with:
+          path: /opt/intel/oneapi/
+          key: install-${{ env.LINUX_CPP_COMPONENTS }}-${{ hashFiles('**/depends.txt') }}
+      - name: Install build-essential and cmake
+        run: sudo apt-get install -y build-essential cmake
+      - name: Install tools including oneAPI
+        if: steps.cache-install.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get install -y $(echo "$LINUX_CPP_COMPONENTS" | sed "s/_/ /g")
+      - name: Cache third-party archives
+        uses: actions/cache@v4
+        with:
+          path: thirdparty/archives
+          key: thirdparty-${{ hashFiles('cmake/TAESCCereal.cmake', 'src/LibRPA/thirdparty/manifest.cmake') }}
+      - name: Configure
+        run: |
+          source /opt/intel/oneapi/setvars.sh
+          CC=icx CXX=mpiicpx FC=mpiifx cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_SHARED_LIBS=ON \
+            -DTAESC_ENABLE_LIBRPA=ON \
+            -DTAESC_ENABLE_FORTRAN_BIND=ON \
+            -DTAESC_ENABLE_TEST=OFF \
+            -DENABLE_GREENX_CTEST=OFF \
+            -DLIBRPA_USE_LIBRI=ON \
+            -DLIBRPA_USE_ELPA=OFF \
+            -DLIBRPA_MPI_THREAD_LEVEL=MPI_THREAD_FUNNELED \
+            -DLIBRPA_VERBOSE_OUTPUT=OFF \
+            -DCMAKE_INSTALL_PREFIX="$RUNNER_TEMP/install"
+      - name: Build
+        run: |
+          source /opt/intel/oneapi/setvars.sh
+          cmake --build build -j "$(nproc)"
+      - name: Install
+        run: |
+          source /opt/intel/oneapi/setvars.sh
+          cmake --install build
+      - name: Check installed files
+        run: |
+          prefix="$RUNNER_TEMP/install"
+          status=0
+          for lib in libtaesc.so libtaesc_f03.so; do
+            [[ -n "$(find "$prefix" -name "$lib" -print -quit)" ]] || { echo "::error::Missing $lib"; status=1; }
+          done
+          for f in include/taesc/taesc.h include/taesc/taesc_f03.mod bin/taesc-driver; do
+            [[ -e "$prefix/$f" ]] || { echo "::error::Missing $f"; status=1; }
+          done
+          exit $status
+      - name: Save configure logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: configure-logs-oneapi
+          path: |
+            build/CMakeFiles/CMakeConfigureLog.yaml
+            build/CMakeFiles/CMakeOutput.log
+            build/CMakeFiles/CMakeError.log
+            build/CMakeCache.txt
+          if-no-files-found: ignore
