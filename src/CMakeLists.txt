@@ -18,11 +18,7 @@ if(TAESC_ENABLE_LIBRPA)
   set(LIBRPA_ENABLE_FORTRAN_BIND "${TAESC_ENABLE_FORTRAN_BIND}")
   set(LIBRPA_ENABLE_TEST "${TAESC_ENABLE_TEST}")
   set(LIBRPA_FORTRAN_DP "${TAESC_FORTRAN_DP}")
-  # TAESC owns LibRI, LibComm (submodules) and cereal (downloaded by
-  # cmake/TAESCCereal.cmake). Supply them as parent targets, so
-  # that LibRPA compiles against these trees in place: no copy, no patch overlay.
-  # LibRPA then selects MPI_THREAD_MULTIPLE automatically when
-  # LIBRPA_MPI_THREAD_LEVEL is empty. Set it explicitly in HPC build scripts.
+  # Supply LibRI and cereal as parent targets.
   function(taesc_header_target name dir)
     if(NOT EXISTS "${dir}")
       message(FATAL_ERROR "${name}: ${dir} not found. Run `git submodule update --init --recursive`.")
@@ -33,7 +29,9 @@ if(TAESC_ENABLE_LIBRPA)
     endif()
   endfunction()
   taesc_header_target(LibRI::LibRI "${CMAKE_CURRENT_SOURCE_DIR}/LibRI/include")
-  taesc_header_target(LibComm::LibComm "${CMAKE_CURRENT_SOURCE_DIR}/LibComm/include")
+  # HACK: Pass LibComm as a source path, so LibRPA can apply its pinned receive-task patch to a managed copy.
+  # Restore the parent target once we use an upstream version containing the fix, or decide to drop the patch.
+  set(LIBCOMM_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/LibComm/include")
   include("${CMAKE_SOURCE_DIR}/cmake/TAESCCereal.cmake")
 
   # LibDDLA is only built for GPU backends. Use the submodule unless the user
